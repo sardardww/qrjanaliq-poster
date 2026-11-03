@@ -16,7 +16,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
-from urllib.parse import urljoin
+from urllib.parse import quote_plus, urljoin
 
 import requests
 from bs4 import BeautifulSoup
@@ -32,6 +32,49 @@ HEADERS = {"User-Agent": USER_AGENT, "Accept-Language": "uz,ru;q=0.9,en;q=0.8"}
 HISTORY_FILE = Path("posted_history.json")
 CYRILLIC_RE = re.compile(r"[\u0400-\u04FF]")
 BG_URL_RE = re.compile(r"background-image:url\('([^']+)'\)")
+
+CYR_TO_QQ_LATIN = {
+    "А": "A", "а": "a",
+    "Ә": "Á", "ә": "á", "Ӓ": "Á", "ӓ": "á",
+    "Б": "B", "б": "b",
+    "В": "V", "в": "v",
+    "Г": "G", "г": "g",
+    "Ғ": "Ǵ", "ғ": "ǵ",
+    "Д": "D", "д": "d",
+    "Е": "E", "е": "e",
+    "Ё": "Yo", "ё": "yo",
+    "Ж": "J", "ж": "j", "Җ": "J", "җ": "j",
+    "З": "Z", "з": "z",
+    "И": "I", "и": "i", "І": "Í", "і": "ı",
+    "Й": "Y", "й": "y",
+    "К": "K", "к": "k",
+    "Қ": "Q", "қ": "q",
+    "Л": "L", "л": "l",
+    "М": "M", "м": "m",
+    "Н": "N", "н": "n",
+    "Ң": "Ń", "ң": "ń",
+    "О": "O", "о": "o",
+    "Ө": "Ó", "ө": "ó",
+    "П": "P", "п": "p",
+    "Р": "R", "р": "r",
+    "С": "S", "с": "s",
+    "Т": "T", "т": "t",
+    "У": "U", "у": "u",
+    "Ү": "Ú", "ү": "ú",
+    "Ў": "W", "ў": "w",
+    "Ф": "F", "ф": "f",
+    "Х": "X", "х": "x",
+    "Ҳ": "H", "ҳ": "h",
+    "Ц": "C", "ц": "c",
+    "Ч": "Ch", "ч": "ch",
+    "Ш": "Sh", "ш": "sh",
+    "Щ": "Sh", "щ": "sh",
+    "Ъ": "", "ъ": "", "Ь": "", "ь": "",
+    "Ы": "Í", "ы": "ı",
+    "Э": "E", "э": "e",
+    "Ю": "Yu", "ю": "yu",
+    "Я": "Ya", "я": "ya",
+}
 
 TELEGRAM_SOURCES = [
     # Karakalpakstan official & high-signal sector channels
@@ -51,12 +94,32 @@ TELEGRAM_SOURCES = [
     ("citizen_uzbekistan", "FAUzbekistan", 12),
 ]
 
-BBC_RSS_FEEDS = [
-    ("world", "https://feeds.bbci.co.uk/news/world/rss.xml"),
-    ("world_tech", "https://feeds.bbci.co.uk/news/technology/rss.xml"),
-    ("world", "https://feeds.bbci.co.uk/uzbek/rss.xml"),
-    ("world", "https://news.google.com/rss/search?q=when:2h+(site:reuters.com+OR+site:apnews.com+OR+site:bbc.com)&hl=en-US&gl=US&ceid=US:en"),
-    ("karakalpakstan", "https://news.google.com/rss/search?q=when:12h+(Qoraqalpog%CA%BBiston+OR+Nukus+OR+Qaraqalpaqstan+OR+Karakalpakstan)&hl=uz&gl=UZ&ceid=UZ:uz"),
+RSS_AND_GLOBAL_FEEDS = [
+    # Direct global & national feeds with high-res watermark-free article photos
+    ("world", "bbc.com", "https://feeds.bbci.co.uk/news/world/rss.xml"),
+    ("world_tech", "bbc.com", "https://feeds.bbci.co.uk/news/technology/rss.xml"),
+    ("world", "bbc.com/uzbek", "https://feeds.bbci.co.uk/uzbek/rss.xml"),
+    ("world", "theguardian.com", "https://www.theguardian.com/world/rss"),
+    ("world_tech", "theguardian.com", "https://www.theguardian.com/uk/technology/rss"),
+    ("world", "aljazeera.com", "https://www.aljazeera.com/xml/rss/all.xml"),
+    ("citizen_uzbekistan", "gazeta.uz", "https://www.gazeta.uz/oz/rss/"),
+    # Open-web Google News live search across all regional & global sites (0 API quota!)
+    ("karakalpakstan", "Google News", "https://news.google.com/rss/search?q=when:12h+(Qoraqalpog%CA%BBiston+OR+Nukus+OR+Qaraqalpaqstan+OR+Karakalpakstan)&hl=uz&gl=UZ&ceid=UZ:uz"),
+    ("world", "Google News", "https://news.google.com/rss/search?q=when:3h+(site:reuters.com+OR+site:apnews.com)&hl=en-US&gl=US&ceid=US:en"),
+]
+
+# Fast, Free-Tier friendly Gemini 3.5 / 3.1 models first (avoids 503 preview delays)
+TEXT_MODELS = [
+    "gemini-3.5-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-3.1-flash-lite",
+    "gemini-flash-lite-latest",
+    "gemini-flash-latest",
+]
+VISION_MODELS = [
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash",
 ]
 
 
@@ -149,7 +212,6 @@ def scrape_telegram_channel(category: str, channel: str, max_age_hours: int) -> 
         if len(text) < 60:
             continue
 
-        # Prefer official primary links cited inside the post (e.g. lex.uz, my.gov.uz)
         external_links = []
         for a_tag in txt_el.select("a[href]"):
             href = a_tag.get("href", "").strip()
@@ -270,9 +332,10 @@ def scrape_kun_uz() -> list[dict[str, Any]]:
     return items
 
 
-def scrape_bbc_rss() -> list[dict[str, Any]]:
+def scrape_rss_and_global_feeds() -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
-    for cat, rss_url in BBC_RSS_FEEDS:
+    ns = {"media": "http://search.yahoo.com/mrss/"}
+    for cat, default_src, rss_url in RSS_AND_GLOBAL_FEEDS:
         resp = http_get(rss_url)
         if not resp:
             continue
@@ -280,48 +343,45 @@ def scrape_bbc_rss() -> list[dict[str, Any]]:
             root = ET.fromstring(resp.content)
         except Exception:
             continue
-        ns = {"media": "http://search.yahoo.com/mrss/"}
-        for item in root.findall("./channel/item")[:10]:
+        for item in root.findall("./channel/item")[:7]:
             title = (item.findtext("title") or "").strip()
-            desc = (item.findtext("description") or "").strip()
-            link = (item.findtext("link") or "").split("?")[0].replace("bbc.co.uk", "bbc.com").strip()
+            raw_desc = (item.findtext("description") or "").strip()
+            desc = BeautifulSoup(raw_desc, "html.parser").get_text(" ", strip=True)
+            link = (item.findtext("link") or "").strip()
+            if "bbc.co.uk" in link:
+                link = link.split("?")[0].replace("bbc.co.uk", "bbc.com")
             pub = (item.findtext("pubDate") or "").strip()
+            src_el = item.find("source")
+            src_name = src_el.text.strip() if src_el is not None and src_el.text else default_src
+
+            photos: list[str] = []
+            for m_content in item.findall("media:content", ns):
+                u = (m_content.get("url") or "").strip()
+                if u and u not in photos:
+                    photos.append(u)
             thumb = item.find("media:thumbnail", ns)
-            photos = []
             if thumb is not None and thumb.get("url"):
-                photos.append(thumb.get("url", "").replace("/standard/240/", "/standard/976/"))
+                u = thumb.get("url", "").replace("/standard/240/", "/standard/976/")
+                if u not in photos:
+                    photos.append(u)
+            enc = item.find("enclosure")
+            if enc is not None and enc.get("url") and "image" in (enc.get("type") or "image"):
+                u = enc.get("url", "").strip()
+                if u and u not in photos:
+                    photos.append(u)
+
             if title and link:
                 items.append(
                     {
                         "category": cat,
-                        "source_name": "bbc.com",
+                        "source_name": src_name,
                         "url": link,
                         "published_at": pub,
-                        "text": f"{title}\n{desc}",
-                        "photo_urls": photos,
+                        "text": f"{title}\n{desc}"[:1200],
+                        "photo_urls": photos[:3],
                     }
                 )
     return items
-
-
-TEXT_MODELS = [
-    "gemini-3.5-flash",
-    "gemini-3.8-flash",
-    "gemini-3.7-flash",
-    "gemini-3.5-flash-lite",
-    "gemini-3.1-flash-lite",
-]
-VISION_MODELS = [
-    "gemini-3.5-flash-lite",
-    "gemini-3.5-flash",
-    "gemini-3.1-flash-lite",
-]
-IMAGE_MODELS = [
-    "gemini-3.1-flash-image",
-    "gemini-3-pro-image",
-    "gemini-3.1-flash-lite-image",
-    "gemini-nano-banana-2.1",
-]
 
 
 def generate_content_with_fallback(
@@ -341,68 +401,15 @@ def generate_content_with_fallback(
         except Exception as exc:
             last_err = exc
             print(f"[WARN] Model {model_name} unavailable ({exc}), trying next fallback...")
-            time.sleep(1.5)
+            time.sleep(1.0)
     raise RuntimeError(f"All fallback models failed: {last_err}")
-
-
-def discover_open_web_news_with_google_search(
-    client: genai.Client, existing_posts: list[str]
-) -> list[dict[str, Any]]:
-    """Use Gemini's live Google Search Grounding to scan the ENTIRE open internet for breaking news."""
-    items: list[dict[str, Any]] = []
-    try:
-        search_prompt = (
-            "Search Google for the freshest, highest-impact news published in the LAST 3 HOURS today across:\n"
-            "1) Karakalpakstan / Nukus (kknews.uz, gov.uz, daryo.uz Karakalpakstan, karakalpakvoice.org, uza.uz)\n"
-            "2) Uzbekistan citizen laws, subsidies, economy, or major breaking news (lex.uz, kun.uz, daryo.uz, gazeta.uz)\n"
-            "3) Major World, Sports, Science, or AI/Tech breaking stories (Reuters, AP News, BBC News, official federations).\n\n"
-            f"Skip topics already posted here: {json.dumps(existing_posts[-15:], ensure_ascii=False)}\n\n"
-            "Return ONLY a valid JSON array (up to 5 items) where each object has:\n"
-            '{"category": "karakalpakstan|citizen_uzbekistan|world", "source_name": "...", "url": "https://...", "text": "Detailed factual summary with numbers/dates"}'
-        )
-        res = generate_content_with_fallback(
-            client,
-            TEXT_MODELS,
-            search_prompt,
-            types.GenerateContentConfig(
-                tools=[types.Tool(google_search=types.GoogleSearch())],
-                temperature=0.2,
-            ),
-        )
-        raw_txt = (res.text or "").strip()
-        # Extract JSON array from grounded response
-        m = re.search(r"\[.*\]", raw_txt, re.DOTALL)
-        if m:
-            found = json.loads(m.group(0))
-            for entry in found:
-                url = (entry.get("url") or "").strip()
-                txt = (entry.get("text") or "").strip()
-                if url.startswith("http") and len(txt) >= 60:
-                    if "vertexaisearch.cloud.google.com" in url:
-                        resolved = http_get(url, timeout=12)
-                        if resolved and resolved.url:
-                            url = resolved.url
-                    items.append(
-                        {
-                            "category": entry.get("category", "world"),
-                            "source_name": entry.get("source_name", "Web"),
-                            "url": url,
-                            "published_at": datetime.now(timezone.utc).isoformat(),
-                            "text": txt[:1500],
-                            "photo_urls": [],  # og:image will be fetched automatically from article URL
-                        }
-                    )
-        time.sleep(2)
-    except Exception as exc:
-        print(f"[WARN] Live Google Search discovery skipped: {exc}")
-    return items
 
 
 def curate_and_write_posts(
     client: genai.Client,
     candidates: list[dict[str, Any]],
     existing_posts: list[str],
-    max_posts: int,
+    ask_count: int,
 ) -> list[dict[str, Any]]:
     playbook = Path("TASK_INSTRUCTIONS.md").read_text(encoding="utf-8") if Path("TASK_INSTRUCTIONS.md").exists() else ""
 
@@ -419,14 +426,15 @@ CANDIDATE STORIES FROM LIVE OFFICIAL & GLOBAL FEEDS (each has an index `idx`):
 {json.dumps([{ "idx": i, **{k: v for k, v in c.items() if k != "photo_urls"}, "has_photo": bool(c.get("photo_urls")) } for i, c in enumerate(candidates)], ensure_ascii=False, indent=2)}
 
 YOUR TASK:
-Select the BEST {max_posts} completely non-duplicate, high-interest stories aiming for a balanced mix (~1 Karakalpakstan, ~1 Citizen Legal/Utility or Uzbekistan important news, ~1-2 World/Tech exclusive stories).
+Select the TOP {ask_count} completely non-duplicate, high-interest stories in priority order (aiming for a strong mix across Karakalpakstan, Citizen Legal/Utility or Uzbekistan important news, and World/Tech exclusive stories).
+Strongly prefer candidates where `has_photo` is true or whose `url` is a direct news article (not `news.google.com`), so every post has an authentic real photo.
 Skip minor appointments, bureaucratic meetings without concrete citizen impact, greetings, or ads.
 
 CRITICAL LANGUAGE & HTML RULES FOR EACH CAPTION:
 1. Write 100% pure literary KARAKALPAK LATIN (`Á á, Ó ó, Ú ú, Í ı, Ǵ ǵ, Ń ń`).
-   - ZERO Cyrillic letters anywhere!
-   - NEVER use Uzbek `o'`, `g'`, `sh` mistakes or Uzbek words (`bo'ldi` -> `boldı`, `uchun` -> `ushın`, `bilan` -> `menen`, `ham` -> `hám`, `so'm` -> `sum`, `o'rinbosari` -> `orınbasarı`, `tuman` -> `rayon`, `viloyat` -> `wálayat`, `xodim` -> `xızmetker`).
-2. Keep total caption length between 380 and 880 characters (strictly < 920 chars).
+   - ZERO Cyrillic letters anywhere! Double-check every word so no Russian/Cyrillic lookalike letters (`а`, `е`, `о`, `с`, `т`, `н`, `и`, `В`) slip in.
+   - NEVER use Uzbek `o'`, `g'` or Uzbek words (`bo'ldi` -> `boldı`, `uchun` -> `ushın`, `bilan` -> `menen`, `ham` -> `hám`, `so'm` -> `sum`, `o'rinbosari` -> `orınbasarı`, `tuman` -> `rayon`, `viloyat` -> `wálayat`, `xodim` -> `xızmetker`).
+2. Keep visible text concise: between 350 and 820 characters (strictly < 900 visible chars).
 3. Use ONLY valid Telegram HTML tags: `<b>...</b>`, `<blockquote>...</blockquote>`, `<a href="...">...</a>`. Every opened tag MUST be closed. Do NOT use `<br>`, `<p>`, or Markdown `**`.
 4. Lead with ONE fitting emoji (`⚡️`, `🚨`, `❓`, `🔰`, `🚀`, `🏆`, `🚛`, `💻`) + `<b>Headline</b>`.
 5. End EVERY caption with these exact two lines:
@@ -437,7 +445,7 @@ Return ONLY a JSON array of objects with keys:
 - "candidate_idx": integer index into CANDIDATE STORIES
 - "source_url": string (exact URL from that candidate)
 - "caption_html": string (complete ready-to-post Telegram HTML caption)
-- "image_generation_prompt": string (English realistic photojournalism prompt, ZERO text/logos/watermarks, in case candidate photo is missing or watermarked)
+- "wikimedia_search_keywords": string (2-3 simple English nouns for backup photo search, e.g. "Uzbekistan parliament" or "high speed train")
 """
 
     resp = generate_content_with_fallback(
@@ -461,17 +469,40 @@ Return ONLY a JSON array of objects with keys:
     return parsed
 
 
+def transliterate_stray_cyrillic_outside_tags(html_text: str) -> str:
+    """Convert any stray Cyrillic characters or homoglyphs in text nodes into pure Karakalpak Latin."""
+    parts = re.split(r"(<[^>]+>)", html_text)
+    out: list[str] = []
+    for part in parts:
+        if part.startswith("<") and part.endswith(">"):
+            out.append(part)
+        else:
+            converted = "".join(CYR_TO_QQ_LATIN.get(ch, ch) for ch in part)
+            out.append(converted)
+    return "".join(out)
+
+
 def sanitize_and_validate_caption(caption: str) -> str | None:
     caption = caption.lstrip("\ufeff").strip()
-    if len(caption) > 980 or len(caption) < 150:
-        print(f"[WARN] Caption length out of bounds ({len(caption)} chars)")
-        return None
+    caption = caption.replace("<br>", "\n").replace("<br/>", "\n").replace("<br />", "\n")
+
     if CYRILLIC_RE.search(caption):
-        print(f"[WARN] Cyrillic character detected in caption, rejecting: {CYRILLIC_RE.findall(caption)}")
+        found_cyr = CYRILLIC_RE.findall(caption)
+        print(f"[INFO] Auto-transliterating {len(found_cyr)} stray Cyrillic chars to Karakalpak Latin: {found_cyr[:10]}")
+        caption = transliterate_stray_cyrillic_outside_tags(caption)
+
+    # Escape any bare '&' not part of an HTML entity so Telegram HTML parser never fails
+    caption = re.sub(r"&(?!(?:amp|lt|gt|quot|#\d+|#x[0-9a-fA-F]+);)", "&amp;", caption)
+
+    visible_text = BeautifulSoup(caption, "html.parser").get_text()
+    if len(visible_text) > 1015 or len(visible_text) < 120:
+        print(f"[WARN] Visible caption length out of bounds ({len(visible_text)} chars)")
         return None
-    if "@qrjanaliq" not in caption or "Deregi:" not in caption:
-        print("[WARN] Missing mandatory Deregi or @qrjanaliq footer.")
+    if CYRILLIC_RE.search(visible_text):
+        print(f"[WARN] Unmapped Cyrillic still present, rejecting: {CYRILLIC_RE.findall(visible_text)}")
         return None
+    if "@qrjanaliq" not in caption:
+        caption = caption.rstrip() + '\n👉 <a href="https://t.me/qrjanaliq">@qrjanaliq — aǵza bolıw</a>'
     return caption
 
 
@@ -493,7 +524,8 @@ def verify_photo_clean_and_relevant(
             "Inspect this image carefully. Return JSON {\"ok\": true/false, \"reason\": \"...\"}. "
             "Set \"ok\": false if: (1) it contains a competitor Telegram channel watermark/handle like "
             "@KARAKALPAK24, @xaliq_ushin, @KarPressa, @qalampir, @kunuzofficial, OR "
-            "(2) the image is completely unrelated to the story (e.g. a football player on a non-sports story). "
+            "(2) it is a generic website logo/icon (like a Google News 'G' icon or plain logo), OR "
+            "(3) the image is completely unrelated to the story (e.g. a football player on a non-sports story). "
             "Official government emblems or official appointment cards without competitor @handles are OK."
         )
         res = generate_content_with_fallback(
@@ -509,7 +541,7 @@ def verify_photo_clean_and_relevant(
             ),
         )
         verdict = json.loads(res.text)
-        time.sleep(2)
+        time.sleep(1.2)
         if not verdict.get("ok", False):
             print(f"[INFO] Vision rejected photo: {verdict.get('reason')}")
             return False
@@ -519,48 +551,52 @@ def verify_photo_clean_and_relevant(
         return True
 
 
-def generate_fallback_photo(client: genai.Client, prompt: str) -> bytes | None:
-    """Generate a clean, realistic editorial photo if no clean source photo exists."""
-    clean_prompt = (
-        f"Realistic editorial news photography, natural lighting, high resolution, 16:9 aspect ratio, "
-        f"strictly NO text, NO logos, NO watermarks: {prompt}"
+def search_wikimedia_fallback_photos(keywords: str) -> list[str]:
+    """Free, watermark-free editorial photo fallback from Wikimedia Commons."""
+    if not keywords.strip():
+        return []
+    api_url = (
+        "https://commons.wikimedia.org/w/api.php?action=query&generator=search"
+        f"&gsrnamespace=6&gsrsearch={quote_plus(keywords + ' filetype:bitmap')}&gsrlimit=4"
+        "&prop=imageinfo&iiprop=url&iiurlwidth=1200&format=json"
     )
-    for img_model in IMAGE_MODELS:
-        try:
-            res = client.models.generate_content(
-                model=img_model,
-                contents=clean_prompt,
-                config=types.GenerateContentConfig(response_modalities=["IMAGE", "TEXT"]),
-            )
-            for part in res.candidates[0].content.parts:
-                if part.inline_data and part.inline_data.data:
-                    return part.inline_data.data
-        except Exception as exc:
-            print(f"[WARN] {img_model} fallback unavailable: {exc}")
-            time.sleep(1)
-    return None
+    resp = http_get(api_url, timeout=12)
+    if not resp:
+        return []
+    urls: list[str] = []
+    try:
+        pages = resp.json().get("query", {}).get("pages", {})
+        for page in pages.values():
+            for ii in page.get("imageinfo", []):
+                u = ii.get("thumburl") or ii.get("url")
+                if u and u.lower().endswith((".jpg", ".jpeg", ".png")):
+                    urls.append(u)
+    except Exception:
+        pass
+    return urls
 
 
 def get_clean_photo_for_post(
-    client: genai.Client, candidate: dict[str, Any], caption: str, gen_prompt: str
+    client: genai.Client, candidate: dict[str, Any], caption: str, wiki_keywords: str
 ) -> bytes | None:
     urls = list(candidate.get("photo_urls", []))
 
-    # Also try og:image from the target article URL if not already tried
     art_url = candidate.get("url", "")
-    if art_url.startswith("http") and "t.me/" not in art_url:
+    if art_url.startswith("http") and "t.me/" not in art_url and "news.google.com" not in art_url:
         art_resp = http_get(art_url)
         if art_resp:
             soup = BeautifulSoup(art_resp.text, "html.parser")
             og = soup.select_one("meta[property='og:image']")
-            if og and og.get("content") and og["content"] not in urls:
+            if og and og.get("content") and og["content"].strip() not in urls:
                 urls.insert(0, og["content"].strip())
 
-    for img_url in urls:
+    # Append Wikimedia Commons backup URLs in case source had no photo or had a competitor watermark
+    urls.extend(search_wikimedia_fallback_photos(wiki_keywords))
+
+    for img_url in urls[:6]:
         resp = http_get(img_url)
         if not resp or len(resp.content) < 5500:
             continue
-        # Convert to clean RGB JPEG via Pillow
         try:
             with Image.open(io.BytesIO(resp.content)) as im:
                 rgb = im.convert("RGB")
@@ -573,17 +609,6 @@ def get_clean_photo_for_post(
         if verify_photo_clean_and_relevant(client, jpg_bytes, caption):
             return jpg_bytes
 
-    print("[INFO] Generating clean editorial image via AI fallback...")
-    raw_gen = generate_fallback_photo(client, gen_prompt)
-    if raw_gen:
-        try:
-            with Image.open(io.BytesIO(raw_gen)) as im:
-                rgb = im.convert("RGB")
-                buf = io.BytesIO()
-                rgb.save(buf, format="JPEG", quality=90)
-                return buf.getvalue()
-        except Exception:
-            return raw_gen
     return None
 
 
@@ -594,7 +619,7 @@ def send_telegram_photo(bot_token: str, chat_id: str, photo_bytes: bytes, captio
         data={
             "chat_id": chat_id,
             "parse_mode": "HTML",
-            "caption": caption_html,  # Clean Python UTF-8 string without BOM
+            "caption": caption_html,
         },
         files={"photo": ("news.jpg", photo_bytes, "image/jpeg")},
         timeout=30,
@@ -610,14 +635,13 @@ def main() -> int:
     existing_posts, seen_urls = fetch_existing_channel_posts()
     print(f"      Found {len(existing_posts)} recent channel posts & {len(seen_urls)} seen URLs.")
 
-    print("[2/4] Scanning ENTIRE open web via Gemini Google Search + official feeds...")
+    print("[2/4] Scanning global & official Karakalpak/Uzbek feeds...")
     raw_candidates: list[dict[str, Any]] = []
-    raw_candidates.extend(discover_open_web_news_with_google_search(client, existing_posts))
     raw_candidates.extend(scrape_kknews())
     for cat, ch, hrs in TELEGRAM_SOURCES:
         raw_candidates.extend(scrape_telegram_channel(cat, ch, hrs))
     raw_candidates.extend(scrape_kun_uz())
-    raw_candidates.extend(scrape_bbc_rss())
+    raw_candidates.extend(scrape_rss_and_global_feeds())
 
     candidates = [
         c
@@ -630,17 +654,21 @@ def main() -> int:
         print("[DONE] No unseen stories right now.")
         return 0
 
-    print(f"[3/4] Curating & writing up to {max_posts} Karakalpak Latin posts with Gemini...")
-    selected = curate_and_write_posts(client, candidates, existing_posts, max_posts)
+    ask_count = min(max_posts + 2, 5)
+    print(f"[3/4] Curating & writing Karakalpak Latin posts with Gemini (target={max_posts}, pool={ask_count})...")
+    selected = curate_and_write_posts(client, candidates, existing_posts, ask_count)
 
     published_count = 0
     new_urls = list(seen_urls)
     new_titles = list(existing_posts)
 
     print("[4/4] Verifying photos & publishing to @qrjanaliq...")
-    for item in selected[:max_posts]:
+    for item in selected:
+        if published_count >= max_posts:
+            break
         idx = item.get("candidate_idx")
         if idx is None or not (0 <= idx < len(candidates)):
+            print(f"[WARN] Invalid candidate_idx={idx}, skipping.")
             continue
         cand = candidates[idx]
         caption = sanitize_and_validate_caption(item.get("caption_html", ""))
@@ -648,10 +676,10 @@ def main() -> int:
             continue
 
         photo_bytes = get_clean_photo_for_post(
-            client, cand, caption, item.get("image_generation_prompt", cand["text"][:180])
+            client, cand, caption, item.get("wikimedia_search_keywords", "")
         )
         if not photo_bytes:
-            print(f"[SKIP] Could not obtain clean related photo for {cand['url']}; skipping post.")
+            print(f"[SKIP] Could not obtain clean related photo for {cand['url']}; trying backup story.")
             continue
 
         res = send_telegram_photo(bot_token, chat_id, photo_bytes, caption)
