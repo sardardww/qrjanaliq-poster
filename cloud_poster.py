@@ -155,19 +155,20 @@ RSS_AND_GLOBAL_FEEDS = [
     ("world", "Google News", "https://news.google.com/rss/search?q=when:3h+(site:reuters.com+OR+site:apnews.com)&hl=en-US&gl=US&ceid=US:en"),
 ]
 
-# ALWAYS prioritize flagship full models (10x better Karakalpak grammar & reasoning than -lite!)
+# ALWAYS prioritize flagship unlocked models first (verified from AI Studio: no Paid lock!)
 TEXT_MODELS = [
-    "gemini-3.5-flash",
-    "gemini-3.5-flash",  # Retry once on transient 503 before falling back
-    "gemini-3-flash-preview",
+    "gemini-3.8-flash",
+    "gemini-3.8-flash",  # Retry once on transient 503/429 before falling back
     "gemini-3.1-pro-preview",
-    "gemini-flash-latest",
+    "gemini-pro-latest",
     "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite",
 ]
 VISION_MODELS = [
-    "gemini-3.5-flash",
-    "gemini-3-flash-preview",
+    "gemini-3.8-flash",
+    "gemini-3.1-pro-preview",
     "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite",
 ]
 
 
@@ -455,11 +456,15 @@ def generate_content_with_fallback(
     last_err: Exception | None = None
     for idx, model_name in enumerate(models):
         try:
-            return client.models.generate_content(
+            resp = client.models.generate_content(
                 model=model_name,
                 contents=contents,
                 config=config,
             )
+            if not (resp.text or "").strip():
+                raise ValueError(f"Empty text response from {model_name}")
+            print(f"[INFO] Generated content using model: {model_name}")
+            return resp
         except Exception as exc:
             last_err = exc
             print(f"[WARN] Model {model_name} attempt {idx + 1} unavailable ({exc}), trying next...")
@@ -667,9 +672,14 @@ def verify_photo_clean_and_relevant(
                 temperature=0.0,
             ),
         )
-        verdict = json.loads(res.text)
+        raw_verdict = (res.text or "").strip()
+        if raw_verdict.startswith("```"):
+            raw_verdict = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw_verdict, flags=re.DOTALL).strip()
+        verdict = json.loads(raw_verdict)
+        if isinstance(verdict, list) and verdict:
+            verdict = verdict[0]
         time.sleep(1.2)
-        if not verdict.get("ok", False):
+        if isinstance(verdict, dict) and not verdict.get("ok", False):
             print(f"[INFO] Vision rejected photo: {verdict.get('reason')}")
             return False
         return True
@@ -780,8 +790,9 @@ def main() -> int:
         return 0
 
     ask_count = min(max_posts + 2, 5)
-    print(f"[3/5] Curating & drafting Karakalpak Latin posts with flagship Gemini (target={max_posts}, pool={ask_count})...")
+    print(f"[3/5] Curating & drafting Karakalpak Latin posts with Gemini 3.8 Flash (target={max_posts}, pool={ask_count})...")
     selected = curate_and_write_posts(client, candidates, existing_posts, ask_count)
+    time.sleep(1.5)
 
     print("[4/5] Proofreading captions against Official 34-Letter Karakalpak Alphabet & literary grammar...")
     selected = proofread_karakalpak_captions(client, selected)
