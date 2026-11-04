@@ -47,22 +47,59 @@ OFFICIAL 34-LETTER KARAKALPAK LATIN ALPHABET (2016 Law — STRICTLY MANDATORY):
 8. Ǵǵ (ғ)   | 17. Mm (м)  | 26. Uu (у)
 9. Hh (ҳ)   | 18. Nn (н)  | 27. Úú (ү)
 
-CRITICAL ORTHOGRAPHY & GRAMMAR RULES:
-- Letter #32 `Cc` represents Cyrillic `ц`: ALWAYS write `Shveycariya` (NEVER `Shveysariya` or `Shveyariya`), `investiciya`, `kompensaciya`, `konstituciya`, `delegaciya`, `associaciya`, `korrupciya`, `informaciya`, `akciya`, `policiya`, `epicentr` (NEVER `epitsentr`).
-- Letter #19 `Ńń` represents `ң`: Genitive case suffixes `-nıń / -niń / -dıń / -diń / -tıń / -tiń` and 2nd-person `-ńız / -ńiz` MUST ALWAYS use `ń` (e.g. `qıstıń kúnleri`, `jaslardıń`, `máwsimniń`, `Ministrler Keńesiniń`, `oqıwshılardıń` — NEVER `-tın` or `-nın`!).
-- Letter #11 `Íı` (back vowel `ы`) vs #12 `Ii` (front vowel `и`): Follow strict vowel harmony! E.g. `gazlastırılmaǵan` (NEVER `gazlespegen`), `qıstıń`, `jılıtıw`, `jaratılǵan`, `xızmetker`, `Chernobıl`, `qazılma`.
+CRITICAL ORTHOGRAPHY & KARAKALPAK GRAMMAR ENGINE:
+
+1. STRICT MORPHOLOGY & SUFFIX HARMONY:
+- ADJECTIVE SUFFIX: In Karakalpak, noun-to-adjective suffix is ALWAYS `-lı / -li`!
+  * Write `qáwipli` (NEVER Kazakh `qáwipti`!), `tártipli` (NEVER `tártipti`), `quwatlı` (NEVER `quwattı`), `tájiriybeli`, `tásirli`, `paydalı`, `qolaylı`.
+  * Negative adjective: `-sız / -siz` (`qáwipsiz`, `nızamsız`, `paydasız`).
+  * Attributive from noun: `-lıq / -lik` (`turmıslıq gaz`, `balalıq`, `jaslıq`).
+- CASE SYSTEM (SEPTIKLER):
+  * Ataw (Nom): stem
+  * Ilik (Gen): `-nıń / -niń` (vowels), `-dıń / -diń` (sonorants: l, r, z, j, w, y), `-tıń / -tiń` (voiceless: p, t, s, k, q, sh, x). ALWAYS ending in `ń`! (e.g. `Prezidenttiń`, `Ministrler Keńesiniń`, `qıstıń`, `respublikanıń`).
+  * Barıw (Dat): `-ǵa / -ge` (vowels, voiced), `-qa / -ke` (voiceless: p, t, s, k, q, sh, x). (e.g. `toltırıwǵa`, `shaxslarǵa`, `rayonǵa`, `mektepke`, `támiyinlewge`).
+  * Tabıs (Acc): `-nı / -ni` (vowels), `-dı / -di` (voiced), `-tı / -ti` (voiceless). (e.g. `qáwipsizlikti`, `ómirin`, `gazdı`).
+  * Orın (Loc): `-da / -de` (vowels, voiced), `-ta / -te` (voiceless). (e.g. `qalasında`, `stanciyalarda`, `mektepte`).
+  * Shıǵıs (Abl): `-dan / -den` (vowels, voiced), `-tan / -ten` (voiceless). (e.g. `jolawshılardan`, `qáwip-qáterden`).
+  * Kómekshi (Inst): `-menen / -benen / -penen` (e.g. `mashina menen`, `qural menen` — NEVER Uzbek `bilan`!).
+- VERBAL FORMS (FEYILLER):
+  * Masdar (Infinitive): `-ıw / -iw` (`toltırıw`, `islew`, `engiziw`, `belgilew`, `kóriw` — NEVER Uzbek `-ish / -moq`, NEVER Kazakh `-u / -ü` like `істеу/толтыру`).
+  * Passive: `-ıl / -il / -l-` (`belgilendi`, `engizildi`, `tartıldı`, `járiyalandı`).
+  * Written/Journalistic Aspect: `-maqta / -mekte` (`ámelge asırılmaqta`, `ótkizilmekte`) or past `-dı / -di` (`júz berdi`, `qaytıs boldı`, `jaratıldı`).
+  * Verbal negative: `-baydı / -beydi`, `-paydı / -peydi`, `-maydı / -meydi` (e.g. `ruqsat etilmeydi`, `toltırmaydı`).
+
+2. ZERO KAZAKHISMS (Strictly Forbidden Kazakh Roots & Morphemes):
+- Kazakh `qáwipti` -> Karakalpak `qáwipli`
+- Kazakh `joba / jobalar` -> Karakalpak `joybar / joybarlar` (project) or `reje` (plan)
+- Kazakh `baǵıt / baǵıttalǵan` -> Karakalpak `baǵdar / baǵdarlanǵan` (or `qaratılǵan`)
+- Kazakh `orın aldı` -> Karakalpak `júz berdi` or `bolıp ótti`
+- Kazakh `múmkindik` -> Karakalpak `múmkinshilik`
+- Kazakh `jıynalıs` -> Karakalpak `májilis`
+- Kazakh `úkimat` -> Karakalpak `húkimet`
+- Kazakh `arıza` -> Karakalpak `arza`
+- Kazakh `quwattı` -> Karakalpak `quwatlı`
+
+3. ZERO UZBEKISMS:
+- `chunki` -> `sebebi` / `óytkeni`; `uchun` -> `ushın`; `bilan` -> `menen`
+- `lekin / ammo` -> `biraq`; `faqat` -> `tek` / `tek ǵana`; `juda` -> `júdá`
+- `ham` -> `hám`; `har` -> `hár`; `kerak` -> `kerek` / `tiyis`
+- `bo'yicha` -> `boyınsha`; `haqida / to'g'risida` -> `haqqında` / `tuwralı`
+- `avto-gaz` -> `avtogaz`; `turmis gaz` -> `turmıslıq gaz`
+- `zilzila` -> `jer silkiniwi`; `jonivor / jánivor` -> `janzat / haywan`
+- `sayyora` -> `planeta`; `tezyurar` -> `tez júrer`; `ulkan` -> `úlken`
+- `iqtidarlı` -> `uqıplı`; `moslasqan` -> `maslasqan`; `ommalastırıw` -> `ǵalabalastırıw`
+- `taqdimatı` -> `tanıstırıw máresimi`; `sóxbat` -> `sáwbetlesiw`; `tunda` -> `túnde`
+- `ulanbaǵan / ulanǵan` -> `jalǵanbaǵan / jalǵanǵan`
+- `dástúr` (when program/initiative) -> `baǵdarlama / baǵdarlaması`
+- `so'm` -> `sum`; `tuman` -> `rayon`; `viloyat` -> `wálayat`; `xodim` -> `xızmetker`
+- `o'rinbosari` -> `orınbasarı`; `tadbir` -> `ilaj`
+
+4. ALPHABET ACCURACY (Official 2016 Latin):
+- Letter #32 `Cc` represents `ц`: ALWAYS `Shveycariya` (NEVER `Shveysariya` or `Shveyariya`), `investiciya`, `kompensaciya`, `konstituciya`, `delegaciya`, `associaciya`, `korrupciya`, `informaciya`, `akciya`, `policiya`, `epicentr` (NEVER `epitsentr`).
+- Letter #19 `Ńń` represents `ң`: Genitive `-nıń / -niń / -dıń / -diń / -tıń / -tiń` and 2nd-person `-ńız / -ńiz` MUST ALWAYS use `ń`.
+- Letter #11 `Íı` (back vowel `ы`) vs #12 `Ii` (front vowel `и`): follow strict vowel harmony! E.g. `gazlastırılmaǵan` (NEVER `gazlespegen`), `qıstıń`, `jılıtıw`, `jaratılǵan`, `xızmetker`.
 - Letter #29 `Ww` (`ў`): Write `oqıw`, `saylaw`, `paydalanıw`, `qollap-quwatlawǵa`, `aǵza bolıw`, `áwmet`, `máwsim`, `wálayat`, `Awǵanstan`, `qáwipsizlik`.
-- ZERO Turkish/old-Uzbek letters (`Ş, ş, Ç, ç, Ğ, ğ, Ö, ö, Ü, ü, İ, o', g', ʻ`). For Chinese/foreign `ч`, ALWAYS use `#33 Ch ch` (`Chjoushan`, `Yunchjou` — NEVER `Ç` or `ç`).
-- ZERO Kazakhisms: NEVER write `joba/jobalar` -> write `joybar/joybarlar`; NEVER write `baǵıtlanǵan` -> write `baǵdarlanǵan` or `qaratılǵan`; NEVER write `arıza` -> write `arza`.
-- ZERO Uzbekisms:
-  * `ulanbaǵan / ulanǵan` -> `jalǵanbaǵan / jalǵanǵan`
-  * `dástúr / dástúri` (when meaning program/initiative) -> `baǵdarlama / baǵdarlaması` (`dástúr` means tradition!)
-  * `Afǵanstan / Afg'oniston` -> `Awǵanstan`; `Fárǵona` -> `Ferǵana`
-  * `Favqulodda va Muxtor elshi / Muxtar elshi` -> `Ayrıqsha hám Tolıq huqıqlı elshi`
-  * `zilzila` -> `jer silkiniwi`; `jánivor / jonivor` -> `janzat / haywan`; `sayyora` -> `planeta`; `tezyurar` -> `tez júrer`; `ulkan` -> `úlken`; `iqtidarlı` -> `uqıplı`; `moslasqan` -> `maslasqan`; `ommalastırıw` -> `ǵalabalastırıw`; `taqdimatı` -> `tanıstırıw máresimi`; `sóxbat` -> `sáwbetlesiw`; `tunda` -> `túnde`
-  * `bo'ldi` -> `boldı`, `uchun` -> `ushın`, `bilan` -> `menen`, `ham` -> `hám`, `qılıw` -> `etiw`
-  * `so'm` -> `sum`, `tuman` -> `rayon`, `viloyat` -> `wálayat`, `xodim` -> `xızmetker`, `o'rinbosari` -> `orınbasarı`
-- Number & grammar accuracy: Never pluralize a single city (`Nókis qalasındaǵı`, NEVER `Nókis qalalarındaǵı`). Distinguish "from X to Y" (`200 kVt·saattan 350 kVt·saatqa arttırıldı`, NEVER `200 kVt·saatqa asırılıp`).
+- ZERO Turkish/old-Uzbek letters (`Ş, ş, Ç, ç, Ğ, ğ, Ö, ö, Ü, ü, İ, o', g', ʻ`). Chinese/foreign `ч` is ALWAYS `#33 Ch ch`.
 """
 
 CYR_TO_QQ_LATIN = {
@@ -157,6 +194,18 @@ AUTO_WORD_FIXES = [
     (r"\bAvto[- ]gaz\b", "Avtogaz"),
     (r"\bturmıs gaz\b", "turmıslıq gaz"),
     (r"\bTurmıs gaz\b", "Turmıslıq gaz"),
+    (r"\borın aldı\b", "júz berdi"),
+    (r"\bOrın aldı\b", "Júz berdi"),
+    (r"\bmúmkindik\b", "múmkinshilik"),
+    (r"\bMúmkindik\b", "Múmkinshilik"),
+    (r"\btártipti\b", "tártipli"),
+    (r"\bTártipti\b", "Tártipli"),
+    (r"\bquwattı\b", "quwatlı"),
+    (r"\bQuwattı\b", "Quwatlı"),
+    (r"\bjıynalıs\b", "májilis"),
+    (r"\bJıynalıs\b", "Májilis"),
+    (r"\bteledidar\b", "televizor"),
+    (r"\bTeledidar\b", "Televizor"),
 ]
 
 # ======================================================================================
