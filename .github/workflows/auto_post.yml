@@ -2,8 +2,11 @@ name: "@qaraqalpaqshajanaliqlar Auto News Poster (Every 15 min / 4x per hour)"
 
 on:
   schedule:
-    # Soatiga 4 marta: :00, :15, :30, :45 daqiqalarda (Toshkent vaqti 04:00 dan 00:00 gacha)
-    - cron: "0,15,30,45 0-19,23 * * *"
+    # Runs 4 TIMES EVERY HOUR (every 15 minutes: :07, :22, :37, :52)
+    # Off-peak minutes avoid GitHub Actions global queue drops & delays
+    # Between 04:00 and 00:00 Tashkent time (UTC+5)
+    # 23:07..23:52 UTC = 04:07..04:52 UZT | 00:07..19:52 UTC = 05:07..00:52 UZT
+    - cron: "7,22,37,52 0-19,23 * * *"
   workflow_dispatch:
     inputs:
       max_posts:
