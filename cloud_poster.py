@@ -93,13 +93,21 @@ CRITICAL ORTHOGRAPHY & KARAKALPAK GRAMMAR ENGINE:
 - `dástúr` (when program/initiative) -> `baǵdarlama / baǵdarlaması`
 - `so'm` -> `sum`; `tuman` -> `rayon`; `viloyat` -> `wálayat`; `xodim` -> `xızmetker`
 - `o'rinbosari` -> `orınbasarı`; `tadbir` -> `ilaj`
+- `tanaffus` -> `tánepis`; `saroy` -> `saray`; `bezorilik / bizarılıq` -> `buzaqılıq`
+- `kambag'al / kambaǵal` -> `kámbaǵal` (or `jarlı`); `hakam` -> `tóreshi`; `hakamlik` -> `tóreshilik`
+- `nazariy` -> `teoriyalıq`; `turar joy` -> `turaq jay`; `jarohat` -> `jaraqat`
+- `do'kon` -> `dúkan`; `chuvalchang` -> `shuwalshań`; `uzunlik` -> `uzınlıq`
+- `qoida` -> `qaǵıyda` (`qáde` means traditional customs, NOT traffic rules!)
+- Suffix `-tadan` with numbers is FORBIDDEN: write `22-den 45-ke` (NEVER `22 tadan 45 tadan`)!
+- Infinitive `-moq / -mek` is FORBIDDEN: write `támiyinlew` (NEVER `támiyinlemek`)!
+- Suffix harmony: `JIÓ-degi` (NEVER `JIÓ-daǵı`), `uzınlıǵı` (NEVER `uzunlıǵı`), `shiyrinlik` (NEVER `shıyrinlik`).
 
 4. ALPHABET ACCURACY (Official 2016 Latin):
-- Letter #32 `Cc` represents `ц`: ALWAYS `Shveycariya` (NEVER `Shveysariya` or `Shveyariya`), `investiciya`, `kompensaciya`, `konstituciya`, `delegaciya`, `associaciya`, `korrupciya`, `informaciya`, `akciya`, `policiya`, `epicentr` (NEVER `epitsentr`).
+- Letter #32 `Cc` represents `ц`: ALWAYS `Shveycariya` (NEVER `Shveysariya` or `Shveyariya`), `investiciya`, `kompensaciya`, `konstituciya`, `delegaciya`, `associaciya`, `korrupciya`, `informaciya`, `akciya`, `policiya`, `epicentr` (NEVER `epitsentr`), `Savickiy` (NEVER `Savitskiy`).
 - Letter #19 `Ńń` represents `ң`: Genitive `-nıń / -niń / -dıń / -diń / -tıń / -tiń` and 2nd-person `-ńız / -ńiz` MUST ALWAYS use `ń`.
-- Letter #11 `Íı` (back vowel `ы`) vs #12 `Ii` (front vowel `и`): follow strict vowel harmony! E.g. `gazlastırılmaǵan` (NEVER `gazlespegen`), `qıstıń`, `jılıtıw`, `jaratılǵan`, `xızmetker`.
+- Letter #11 `Íı` (back vowel `ы`) vs #12 `Ii` (front vowel `и`): follow strict vowel harmony! E.g. `gazlastırılmaǵan` (NEVER `gazlespegen`), `qıstıń`, `jılıtıw`, `jaratılǵan`, `xızmetker`, `seksewil` (NEVER `saqsewil`), `puqara` (NEVER `puxara`).
 - Letter #29 `Ww` (`ў`): Write `oqıw`, `saylaw`, `paydalanıw`, `qollap-quwatlawǵa`, `aǵza bolıw`, `áwmet`, `máwsim`, `wálayat`, `Awǵanstan`, `qáwipsizlik`.
-- ZERO Turkish/old-Uzbek letters (`Ş, ş, Ç, ç, Ğ, ğ, Ö, ö, Ü, ü, İ, o', g', ʻ`). Chinese/foreign `ч` is ALWAYS `#33 Ch ch`.
+- ZERO Turkish/old-Uzbek letters (`Ş, ş, Ç, ç, Ğ, ğ, Ö, ö, Ü, ü, İ, o', g', ʻ`). Chinese/foreign `ч` is ALWAYS `#33 Ch ch` (e.g. `Yunchjou`, NEVER `Yunçjou`).
 """
 
 CYR_TO_QQ_LATIN = {
@@ -179,11 +187,15 @@ AUTO_WORD_FIXES = [
     (r"\bqıstın\b", "qıstıń"),
     (r"\bislep shıqıldı\b", "islep shıǵıldı"),
     (r"\bJIÓdegiy\b", "JIÓdegi"),
+    (r"\bJIÓ[- ]daǵı\b", "JIÓ-degi"),
+    (r"\bJIÓ[- ]dagi\b", "JIÓ-degi"),
     (r"\bmoslasqan\b", "maslasqan"),
     (r"\biqtidarlı\b", "uqıplı"),
     (r"\bulkan\b", "úlken"),
     (r"\btezyurar\b", "tez júrer"),
+    (r"\bTezyurar\b", "Tez júrer"),
     (r"\bzilzila\b", "jer silkiniwi"),
+    (r"\bZilzila\b", "Jer silkiniwi"),
     (r"\bjánivor", "janzat"),
     (r"\bjonivor", "janzat"),
     (r"\bchuvalchangsimon\b", "qurt tárizli"),
@@ -194,6 +206,10 @@ AUTO_WORD_FIXES = [
     (r"\bAvto[- ]gaz\b", "Avtogaz"),
     (r"\bturmıs gaz\b", "turmıslıq gaz"),
     (r"\bTurmıs gaz\b", "Turmıslıq gaz"),
+    (r"\bsıyıqshı", "sıyqırshı"),
+    (r"\biskerligin\b", "jumısın"),
+    (r"\bqarjılay\b", "finanslıq"),
+    (r"\bjáriymaǵa tartıw\b", "járiyma salıw"),
     (r"\borın aldı\b", "júz berdi"),
     (r"\bOrın aldı\b", "Júz berdi"),
     (r"\bmúmkindik\b", "múmkinshilik"),
@@ -204,6 +220,54 @@ AUTO_WORD_FIXES = [
     (r"\bJıynalıs\b", "Májilis"),
     (r"\bteledidar\b", "televizor"),
     (r"\bTeledidar\b", "Televizor"),
+    # Literary Karakalpak Quality Engine Additions
+    (r"\bvoyevodalığında\b", "voyevodalıǵında"),
+    (r"\bYunçjou\b", "Yunchjou"),
+    (r"\btanaffus(tan|qa|tıń|tı|ta)?\b", r"tánepis\1"),
+    (r"\bTanaffus(tan|qa|tıń|tı|ta)?\b", r"Tánepis\1"),
+    (r"\btámiyinlemek\b", "támiyinlew"),
+    (r"\bnazariy\b", "teoriyalıq"),
+    (r"\bNazariy\b", "Teoriyalıq"),
+    (r"\bmiynet qılıp\b", "miynet etip"),
+    (r"\bhákimlik iskerligin\b", "tóreshilik jumısın"),
+    (r"\bFutbol hákimleri\b", "Futbol tóreshileri"),
+    (r"\bmaqsadında\b", "maqsetinde"),
+    (r"\bkunda\b", "kúnde"),
+    (r"\btunda\b", "túnde"),
+    (r"\bjúze keletin\b", "júzege keletin"),
+    (r"\bshubalshań\b", "shuwalshań"),
+    (r"\bshıyrinlikler", "shiyrinlikler"),
+    (r"\bshıyrinlik", "shiyrinlik"),
+    (r"\bShıyrinlik", "Shiyrinlik"),
+    (r"\bbizarılıq\b", "buzaqılıq"),
+    (r"\b(m|M)ádeniyat saroyı", r"\1ádeniyat sarayı"),
+    (r"\b(s|S)aroyında\b", r"\1arayında"),
+    (r"\b(s|S)aroyda\b", r"\1arayda"),
+    (r"\b(s|S)aroyǵa\b", r"\1arayǵa"),
+    (r"\b(s|S)aroydıń\b", r"\1araydıń"),
+    (r"\bkambaǵal\b", "kámbaǵal"),
+    (r"\bKambaǵal\b", "Kámbaǵal"),
+    (r"\bOlmazor\b", "Almazar"),
+    (r"\bqádelerin mensemey\b", "qaǵıydaların mensemey"),
+    (r"\bjarahat(lan|qa|tıń|tı|ta|lar)?\b", r"jaraqat\1"),
+    (r"\bJarahat(lan|qa|tıń|tı|ta|lar)?\b", r"Jaraqat\1"),
+    (r"\bturar jay", "turaq jay"),
+    (r"\bTurar jay", "Turaq jay"),
+    (r"\bnarkodúkon", "narkodúkan"),
+    (r"\bsaqsewil\b", "seksewil"),
+    (r"\bSavitskiy\b", "Savickiy"),
+    (r"\bpuxara(lar|nıń|ǵa|da|dan|sı)?\b", r"puqara\1"),
+    (r"\bPuxara(lar|nıń|ǵa|da|dan|sı)?\b", r"Puqara\1"),
+    (r"\buzunlıǵı\b", "uzınlıǵı"),
+    (r"\bUzunlıǵı\b", "Uzınlıǵı"),
+    (r"\b(\d+)\s*tadan\b", r"\1-den"),
+    (r"\bsóxbat(lar|qa|tıń|ta|tan|ı)?\b", r"sáwbet\1"),
+    (r"\bSóxbat(lar|qa|tıń|ta|tan|ı)?\b", r"Sáwbet\1"),
+    (r"\bRaqabat komiteti\b", "Ráqabat komiteti"),
+    (r"\baljasıp basqa kartaǵa\b", "jańılısıp basqa kartaǵa"),
+    (r"\b24 kilometrli\b", "24 kilometrlik"),
+    (r"\bsaylandı komanda", "terme komanda"),
+    (r"\bSaylandı komanda", "Terme komanda"),
 ]
 
 # ======================================================================================
@@ -955,8 +1019,8 @@ UZ_TO_QQ_NEWS_BRIDGE: dict[str, str] = {
     "bosqinchilik": "basqınshılıq",
     "qidiruv": "izlestiriw, qıdırıw (NEVER izertlew)",
     "tezkor-qidiruv": "jedel-qıdırıw, jedel-izlestiriw",
-    "shirinliklar": "shıyrinlikler, tatlılıqlar (NEVER shirinlikler)",
-    "shirinlik": "shıyrinlik, tatlılıq",
+    "shirinliklar": "shiyrinlikler, tatlılıqlar (NEVER shıyrinlikler, NEVER shirinlikler)",
+    "shirinlik": "shiyrinlik, tatlılıq",
     "xavfli": "qáwipli (NEVER qáwipti)",
     "xavf": "qáwip",
     "xavfsizlik": "qáwipsizlik",
@@ -979,7 +1043,34 @@ UZ_TO_QQ_NEWS_BRIDGE: dict[str, str] = {
     "chora-tadbirlar": "ilajlar",
     "vafot etdi": "qaytıs boldı, kóz jumdı",
     "halok bo'ldi": "halak boldı",
-    "jarohatlandi": "jarahatlandı",
+    "jarohatlandi": "jaraqatlandı (NEVER jarahatlandi)",
+    "jarohat": "jaraqat",
+    "tanaffus": "tánepis (NEVER tanaffus)",
+    "saroy": "saray (NEVER saroy)",
+    "saroyi": "sarayı",
+    "bezorilik": "buzaqılıq (NEVER bizarılıq)",
+    "kambag'al": "kámbaǵal, jarlı (NEVER kambaǵal)",
+    "kambag'allik": "kámbaǵallıq",
+    "tezyurar": "tez júrer (NEVER tezyurar)",
+    "jonivor": "janzat, haywan (NEVER janıwar)",
+    "tunda": "túnde (NEVER tunda)",
+    "kunda": "kúnde (NEVER kunda)",
+    "turar joy": "turaq jay (NEVER turar joy)",
+    "qoida": "qaǵıyda (NEVER qáde)",
+    "qoidalar": "qaǵıydalar",
+    "hakam": "tóreshi (NEVER hákim - hákim means hokim/governor!)",
+    "hakamlik": "tóreshilik (NEVER hákimlik)",
+    "nazariy": "teoriyalıq (NEVER nazariy)",
+    "yuzaga keladigan": "júzege keletin",
+    "suhbat": "sáwbet, sáwbetlesiw (NEVER sóxbat)",
+    "do'kon": "dúkan (NEVER dúkon)",
+    "qadr-qimmat": "qádir-qımbat",
+    "uzunlik": "uzınlıq (NEVER uzunlik)",
+    "chuvalchang": "shuwalshań (NEVER shubalshań)",
+    "saksovul": "seksewil (NEVER saqsewil)",
+    "fuqaro": "puqara (NEVER puxara)",
+    "fuqarolar": "puqaralar",
+    "raqobat": "ráqabat (NEVER raqabat)",
     "jarima": "járiyma",
     "javobgarlik": "juwapkershilik",
     "javobgarlikka tortildi": "juwapkershilikke tartıldı",
@@ -1091,6 +1182,7 @@ EDITORIAL STYLE — "interesting first" (the style of fast, curiosity-driven new
 - HEADLINE = the concrete event with its strongest detail (who/what/how many), in correct Karakalpak. Good pattern (describe in Karakalpak, do not copy literally): "A business jet crashed in Florida, nine dead", "A Spanish footballer died after a collision with the goalkeeper", "The emergency ministry asked people to check their chimneys". Bad pattern: "A meeting was held", "A ceremony took place".
 - BODY = 2–4 short sentences with the exact numbers/names/places from the candidate, then (when natural) ONE short human or safety line (what people should do / why it matters to them).
 - Mix of topics across the batch: at most ONE routine-official story per batch; at least one story that touches daily life or safety; world/science/tech stories are welcome in every batch.
+- MANDATORY SOURCE DIVERSITY: You MUST pick candidates from completely DIFFERENT sources! Diversify across Karakalpakstan district/regional channels (KarPressa, xaliq_ushin, Turtkul, Taqiyatash, kknews), Uzbekistan official ministries/legal portals (lex.uz, huquqiyaxborot, gov.uz), and World/Tech outlets. NEVER pick multiple stories from the same news outlet!
 
 YOUR TASK:
 1. Select the TOP {ask_count} completely NEW, non-duplicate, most interesting stories following the style above (mix of Karakalpakstan, Uzbekistan daily-life/legal/safety, and World/Tech).
@@ -1132,31 +1224,81 @@ Return ONLY a JSON array of objects with keys:
     return parsed
 
 
+def scan_suspicious_words(caption_html: str) -> list[str]:
+    """Scan candidate caption for common Uzbekisms, Kazakhisms, or orthography traps."""
+    plain = BeautifulSoup(caption_html, "html.parser").get_text(" ", strip=True).lower()
+    flagged = set()
+    for uz_word in UZ_TO_QQ_NEWS_BRIDGE.keys():
+        if re.search(r"\b" + re.escape(uz_word) + r"\b", plain):
+            flagged.add(uz_word)
+    for pattern in [
+        r"\b\w+tadan\b", r"\b\w+mek\b",
+        r"[ğşçöüĞŞÇÖÜ]",
+        r"\b(tanaffus|saroy|bizarılıq|janıwar|tezyurar|tunda|kunda|Olmazor|jarahat|turar jay|saqsewil|Savitskiy|puxara|shıyrinlik)\b"
+    ]:
+        m = re.findall(pattern, plain, re.IGNORECASE)
+        for w in m:
+            if isinstance(w, str) and len(w) > 1:
+                flagged.add(w)
+    return sorted(list(flagged))[:15]
+
+
 def proofread_karakalpak_captions(
     client: genai.Client, items: list[dict[str, Any]], existing_posts: list[str]
 ) -> list[dict[str, Any]]:
-    """Layer 3: 2nd-pass literary Karakalpak proofreader + semantic duplicate blocker."""
+    """Layer 3: 2nd-pass Chief Academic Editor & Critic (Chain-of-Thought Linguistic Proofreader)."""
     if not items:
         return items
     try:
+        items_payload = []
+        for idx, it in enumerate(items):
+            cap = it.get("caption_html", "")
+            suspicious = scan_suspicious_words(cap)
+            items_payload.append({
+                "i": idx,
+                "flagged_suspicious_words": suspicious,
+                "caption_html": cap
+            })
+
         proof_prompt = f"""
-You are a strict Karakalpak language proofreader and semantic deduplication gate for @qaraqalpaqshajanaliqlar.
+You are the Chief Academic Editor and Linguistic Critic of the Karakalpak Language Academy for @qaraqalpaqshajanaliqlar.
+Your task is to protect 100% clean, literary Karakalpak Latin (Qaraqalpaq ádebiy tili) and block semantic duplicates.
 
 {OFFICIAL_KARAKALPAK_ALPHABET_RULES}
 
 ALREADY PUBLISHED ON @qaraqalpaqshajanaliqlar:
 {json.dumps(existing_posts[-40:], ensure_ascii=False, indent=2)}
 
-Inspect each item in INPUT JSON below:
-1. Set `"is_duplicate": true` if the story covers the SAME event, law, decree, tournament arrival, hack/incident, or topic already in ALREADY PUBLISHED ON @qaraqalpaqshajanaliqlar (even if from a different source or follow-up angle). Otherwise `"is_duplicate": false`.
-2. Fix ANY Karakalpak alphabet or spelling errors (`Shveysariya` -> `Shveycariya`, `epitsentr` -> `epicentr`, forbidden `Ç/ç` -> `Ch/ch`, forbidden `İ` -> `I`, `g'/o'` -> `ǵ/ó`, missing `ń` in `-nıń/-niń/-dıń/-diń/-tıń/-tiń`, wrong `ı` vs `i`, wrong `ǵ/ń/á/ó/ú/w`).
-3. Fix ANY Kazakhisms (`joba/jobalar` -> `joybar/joybarlar`, `arıza` -> `arza`, `baǵıtlanǵan` -> `baǵdarlanǵan`) or Uzbekisms (`zilzila` -> `jer silkiniwi`, `jánivor/jonivor` -> `janzat`, `sayyora` -> `planeta`, `tezyurar` -> `tez júrer`, `ulkan` -> `úlken`, `iqtidarlı` -> `uqıplı`, `moslasqan` -> `maslasqan`, `ommalastırıw` -> `ǵalabalastırıw`, `taqdimatı` -> `tanıstırıw máresimi`, `ulanbaǵan` -> `jalǵanbaǵan`, `Muxtar elshi` -> `Tolıq huqıqlı elshi`, `tuman` -> `rayon`, `viloyat` -> `wálayat`, `dástúr` when meaning program -> `baǵdarlama`).
-4. preserve all HTML tags (`<b>`, `<i>`, `<blockquote>`, `<a href="...">`), URLs, numbers, and the closing `@qaraqalpaqshajanaliqlar` line intact!
+INSTRUCTIONS FOR EACH ITEM:
+1. "is_duplicate": set to true if the story covers the SAME event, law, incident, or topic already in ALREADY PUBLISHED.
+2. "linguistic_audit" (MANDATORY CHAIN-OF-THOUGHT):
+   Scan the caption word-by-word. You MUST check:
+   - Any Uzbek roots or loanwords (tanaffus -> tánepis, saroy -> saray, bezorilik/bizarılıq -> buzaqılıq, kambag'al -> kámbaǵal, tezyurar -> tez júrer, janıwar -> janzat, tunda -> túnde, kunda -> kúnde, turar joy -> turaq jay, suhbat/sóxbat -> sáwbet, do'kon -> dúkan, qadr-qimmat -> qádir-qımbat, raqabat -> ráqabat, hakamlik -> tóreshilik, nazariy -> teoriyalıq, qoida -> qaǵıyda)
+   - Any Kazakhisms (joba -> joybar, baǵıt -> baǵdar, múmkindik -> múmkinshilik, jıynalıs -> májilis, quwattı -> quwatlı, orın aldı -> júz berdi/bolıp ótti, saylandı komanda -> terme komanda)
+   - Any forbidden Uzbek suffixes: NEVER use "-tadan" with numbers (use "22-den 45-ke"); NEVER use infinitive "-moq/-mek" (use "-ıw/-iw" like "támiyinlew").
+   - Alphabet & Orthography (Savitskiy -> Savickiy, Yunçjou -> Yunchjou, Turkish ğ/ş/ç/ö/ü, Uzbek apostrophes o'/g').
+   - Vowel harmony & morphology: seksewil (never saqsewil), puqara (never puxara), uzınlıǵı (never uzunlıǵı), shiyrinlik (never shıyrinlik), jaraqat (never jarahat), JIÓ-degi (never JIÓ-daǵı), júzege keletin (never júze keletin).
+   List EVERY error you find in `linguistic_audit`: `[{{"found": "...", "fixed": "...", "reason": "..."}}]`.
+3. "clean_caption_html":
+   Apply all corrections from your linguistic audit to the text.
+   - PRESERVE all HTML formatting tags (<b>, <i>, <blockquote>, <a href="...">) intact!
+   - PRESERVE exact numbers, dates, names, and links intact!
+   - PRESERVE the closing link intact: 👉 <a href="https://t.me/qaraqalpaqshajanaliqlar">@qaraqalpaqshajanaliqlar — aǵza bolıw</a>
 
-INPUT JSON:
-{json.dumps([{"i": idx, "caption_html": it.get("caption_html", "")} for idx, it in enumerate(items)], ensure_ascii=False, indent=2)}
+INPUT ITEMS:
+{json.dumps(items_payload, ensure_ascii=False, indent=2)}
 
-Return ONLY a JSON array of objects `[{{"i": 0, "is_duplicate": false, "caption_html": "..."}}, ...]`.
+Return ONLY a JSON array:
+[
+  {{
+    "i": 0,
+    "is_duplicate": false,
+    "linguistic_audit": [
+      {{"found": "tanaffustan", "fixed": "tánepisten", "reason": "Uzbekism"}}
+    ],
+    "clean_caption_html": "<b>...</b>..."
+  }}
+]
 """
         resp = generate_content_with_fallback(
             client,
@@ -1178,10 +1320,14 @@ Return ONLY a JSON array of objects `[{{"i": 0, "is_duplicate": false, "caption_
                 if not isinstance(pos, int) or not (0 <= pos < len(items)):
                     continue
                 if entry.get("is_duplicate") is True:
-                    print(f"[DEDUP] Layer 3 AI proofreader blocked semantic duplicate at index {pos}.")
+                    print(f"[DEDUP] Layer 3 AI critic blocked semantic duplicate at index {pos}.")
                     duplicate_indices.add(pos)
                     continue
-                new_cap = entry.get("caption_html")
+                audit = entry.get("linguistic_audit", [])
+                if audit:
+                    fixes_summary = ", ".join(f"{a.get('found')} -> {a.get('fixed')}" for a in audit if isinstance(a, dict))
+                    print(f"[LIT-CRITIC] Post #{pos} applied {len(audit)} linguistic fixes: {fixes_summary}")
+                new_cap = entry.get("clean_caption_html") or entry.get("caption_html")
                 if isinstance(new_cap, str) and len(new_cap) > 120:
                     items[pos]["caption_html"] = new_cap
         if duplicate_indices:
@@ -1500,6 +1646,18 @@ def main() -> int:
         caption = sanitize_and_validate_caption(item.get("caption_html", ""))
         if not caption:
             continue
+
+        # ENFORCE: Ensure source link in body points directly to the EXACT article/post URL
+        exact_post_url = cand.get("url") or cand.get("fallback_post_url")
+        if exact_post_url:
+            c_soup = BeautifulSoup(caption, "html.parser")
+            for a_tag in c_soup.find_all("a"):
+                href = a_tag.get("href", "")
+                if "qaraqalpaqshajanaliqlar" not in href:
+                    a_tag["href"] = exact_post_url
+                    break
+            caption = str(c_soup)
+
         plain_caption = BeautifulSoup(caption, "html.parser").get_text(" ", strip=True)
         if is_text_duplicate_of_existing(plain_caption, new_titles):
             continue
