@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-QARAQALPAQSTAN JAN'ALIQLARI (@qrjanaliq) — 24/7 Cloud Automated News Poster
+Qaraqalpaqsha jan'aliqlar (@qaraqalpaqshajanaliqlar) — 24/7 Cloud Automated News Poster
 Official 34-Letter Karakalpak Alphabet + Two-Pass Literary Grammar Proofreading + Exact Photo Matching.
 """
 
@@ -13,7 +13,9 @@ import re
 import sys
 import time
 import xml.etree.ElementTree as ET
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote_plus, urljoin
@@ -46,16 +48,19 @@ OFFICIAL 34-LETTER KARAKALPAK LATIN ALPHABET (2016 Law — STRICTLY MANDATORY):
 9. Hh (ҳ)   | 18. Nn (н)  | 27. Úú (ү)
 
 CRITICAL ORTHOGRAPHY & GRAMMAR RULES:
-- Letter #32 `Cc` represents Cyrillic `ц`: ALWAYS write `Shveycariya` (NEVER `Shveysariya` or `Shveyariya`), `kompensaciya`, `konstituciya`, `delegaciya`, `associaciya`, `korrupciya`, `informaciya`, `akciya`, `policiya`.
-- Letter #19 `Ńń` represents `ң`: Genitive case suffixes `-nıń / -niń / -dıń / -diń / -tıń / -tiń` and 2nd-person `-ńız / -ńiz` MUST ALWAYS use `ń` (e.g. `qıstıń kúnleri`, `Ministrler Keńesiniń`, `oqıwshılardıń` — NEVER `-tın` or `-nın`!).
-- Letter #11 `Íı` (back vowel `ы`) vs #12 `Ii` (front vowel `и`): Follow strict vowel harmony! E.g. `gazlastırılmaǵan` (NEVER `gazlespegen`), `qıstıń`, `jılıtıw`, `jaratılǵan`, `xızmetker`.
-- Letter #29 `Ww` (`ў`): Write `oqıw`, `saylaw`, `aǵza bolıw`, `áwmet`, `máwsim`, `wálayat`, `qáwipsizlik`.
-- ZERO Turkish/old-Uzbek letters (`Ş, ş, Ç, ç, Ğ, ğ, Ö, ö, Ü, ü, o', g', ʻ`).
-- ZERO Kazakhisms: NEVER write `joba/jobalar` -> write `joybar/joybarlar`; NEVER write `baǵıtlanǵan` -> write `baǵdarlanǵan` or `qaratılǵan`.
+- Letter #32 `Cc` represents Cyrillic `ц`: ALWAYS write `Shveycariya` (NEVER `Shveysariya` or `Shveyariya`), `investiciya`, `kompensaciya`, `konstituciya`, `delegaciya`, `associaciya`, `korrupciya`, `informaciya`, `akciya`, `policiya`, `epicentr` (NEVER `epitsentr`).
+- Letter #19 `Ńń` represents `ң`: Genitive case suffixes `-nıń / -niń / -dıń / -diń / -tıń / -tiń` and 2nd-person `-ńız / -ńiz` MUST ALWAYS use `ń` (e.g. `qıstıń kúnleri`, `jaslardıń`, `máwsimniń`, `Ministrler Keńesiniń`, `oqıwshılardıń` — NEVER `-tın` or `-nın`!).
+- Letter #11 `Íı` (back vowel `ы`) vs #12 `Ii` (front vowel `и`): Follow strict vowel harmony! E.g. `gazlastırılmaǵan` (NEVER `gazlespegen`), `qıstıń`, `jılıtıw`, `jaratılǵan`, `xızmetker`, `Chernobıl`, `qazılma`.
+- Letter #29 `Ww` (`ў`): Write `oqıw`, `saylaw`, `paydalanıw`, `qollap-quwatlawǵa`, `aǵza bolıw`, `áwmet`, `máwsim`, `wálayat`, `Awǵanstan`, `qáwipsizlik`.
+- ZERO Turkish/old-Uzbek letters (`Ş, ş, Ç, ç, Ğ, ğ, Ö, ö, Ü, ü, İ, o', g', ʻ`). For Chinese/foreign `ч`, ALWAYS use `#33 Ch ch` (`Chjoushan`, `Yunchjou` — NEVER `Ç` or `ç`).
+- ZERO Kazakhisms: NEVER write `joba/jobalar` -> write `joybar/joybarlar`; NEVER write `baǵıtlanǵan` -> write `baǵdarlanǵan` or `qaratılǵan`; NEVER write `arıza` -> write `arza`.
 - ZERO Uzbekisms:
   * `ulanbaǵan / ulanǵan` -> `jalǵanbaǵan / jalǵanǵan`
+  * `dástúr / dástúri` (when meaning program/initiative) -> `baǵdarlama / baǵdarlaması` (`dástúr` means tradition!)
+  * `Afǵanstan / Afg'oniston` -> `Awǵanstan`; `Fárǵona` -> `Ferǵana`
   * `Favqulodda va Muxtor elshi / Muxtar elshi` -> `Ayrıqsha hám Tolıq huqıqlı elshi`
-  * `bo'ldi` -> `boldı`, `uchun` -> `ushın`, `bilan` -> `menen`, `ham` -> `hám`
+  * `zilzila` -> `jer silkiniwi`; `jánivor / jonivor` -> `janzat / haywan`; `sayyora` -> `planeta`; `tezyurar` -> `tez júrer`; `ulkan` -> `úlken`; `iqtidarlı` -> `uqıplı`; `moslasqan` -> `maslasqan`; `ommalastırıw` -> `ǵalabalastırıw`; `taqdimatı` -> `tanıstırıw máresimi`; `sóxbat` -> `sáwbetlesiw`; `tunda` -> `túnde`
+  * `bo'ldi` -> `boldı`, `uchun` -> `ushın`, `bilan` -> `menen`, `ham` -> `hám`, `qılıw` -> `etiw`
   * `so'm` -> `sum`, `tuman` -> `rayon`, `viloyat` -> `wálayat`, `xodim` -> `xızmetker`, `o'rinbosari` -> `orınbasarı`
 - Number & grammar accuracy: Never pluralize a single city (`Nókis qalasındaǵı`, NEVER `Nókis qalalarındaǵı`). Distinguish "from X to Y" (`200 kVt·saattan 350 kVt·saatqa arttırıldı`, NEVER `200 kVt·saatqa asırılıp`).
 """
@@ -103,70 +108,333 @@ CYR_TO_QQ_LATIN = {
     "Я": "Ya", "я": "ya",
     # Non-Karakalpak Turkish diacritics sometimes copied from source channels
     "Ş": "Sh", "ş": "sh",
+    "Ç": "Ch", "ç": "ch",
     "Ğ": "Ǵ", "ğ": "ǵ",
     "Ö": "Ó", "ö": "ó",
     "Ü": "Ú", "ü": "ú",
+    "İ": "I",
 }
 
 AUTO_WORD_FIXES = [
+    (r"G['’ʻʼ]", "Ǵ"),
+    (r"g['’ʻʼ]", "ǵ"),
+    (r"O['’ʻʼ]", "Ó"),
+    (r"o['’ʻʼ]", "ó"),
     (r"\bShveysariya", "Shveycariya"),
     (r"\bshveysariya", "shveycariya"),
     (r"\bShveyariya", "Shveycariya"),
     (r"\bMuxtar elshi", "Tolıq huqıqlı elshi"),
     (r"\bmuxtar elshi", "tolıq huqıqlı elshi"),
+    (r"\bAfǵanstan", "Awǵanstan"),
+    (r"\bFárǵona", "Ferǵana"),
+    (r"\bepitsentr", "epicentr"),
+    (r"\bEpitsentr", "Epicentr"),
     (r"\bjobalar", "joybarlar"),
     (r"\bJobalar", "Joybarlar"),
     (r"\bjobası", "joybarı"),
+    (r"\barıza", "arza"),
+    (r"\bArıza", "Arza"),
     (r"\bbaǵıtlanǵan\b", "baǵdarlanǵan"),
     (r"\bulanbaǵan\b", "jalǵanbaǵan"),
     (r"\bGazlespegen\b", "Gazlastırılmaǵan"),
     (r"\bgazlespegen\b", "gazlastırılmaǵan"),
     (r"\bNókis qalalarındaǵı\b", "Nókis qalasındaǵı"),
     (r"\bqıstın\b", "qıstıń"),
+    (r"\bislep shıqıldı\b", "islep shıǵıldı"),
+    (r"\bJIÓdegiy\b", "JIÓdegi"),
+    (r"\bmoslasqan\b", "maslasqan"),
+    (r"\biqtidarlı\b", "uqıplı"),
+    (r"\bulkan\b", "úlken"),
+    (r"\btezyurar\b", "tez júrer"),
+    (r"\bzilzila\b", "jer silkiniwi"),
+    (r"\bjánivor", "janzat"),
+    (r"\bjonivor", "janzat"),
+    (r"\bchuvalchangsimon\b", "qurt tárizli"),
+    (r"\bsayyora\b", "planeta"),
 ]
 
+# ======================================================================================
+# PRIMARY SOURCE LIST — every entry below was live-tested on 2026-11-04 (public preview
+# works, posted within the last days). This list is the PRIMARY hunting ground, NOT a limit:
+# the pipeline also scans open-web discovery queries (OPEN_WEB_QUERIES) and Gemini is told
+# it may prefer any reliable story found there. Add/remove lines freely; dead sources are
+# skipped silently at runtime.
+# Format: (category, telegram_handle, max_age_hours)
+# ======================================================================================
 TELEGRAM_SOURCES = [
-    # Karakalpakstan official & high-signal sector channels
-    ("karakalpakstan", "joqargikenes", 14),
-    ("karakalpakstan", "QResMinistrlerKenesi", 14),
-    ("karakalpakstan", "krbajixana", 14),
-    ("karakalpakstan", "kkeduuz", 14),
-    ("karakalpakstan", "jaslar_isleri_agentligi", 14),
-    ("karakalpakstan", "KarPressa", 8),
-    # Citizen legal, subsidies, safety & Uzbekistan official channels
-    ("citizen_uzbekistan", "xaliq_ushin", 18),
-    ("citizen_uzbekistan", "karinform", 18),
+    # --- KARAKALPAKSTAN (primary: local official + media + active districts) ---
+    ("karakalpakstan", "KarPressa", 24),
+    ("karakalpakstan", "kknews_uz", 24),
+    ("karakalpakstan", "kkeduuz", 24),
+    ("karakalpakstan", "krbajixana", 24),
+    ("karakalpakstan", "jaslar_isleri_agentligi", 24),
+    ("karakalpakstan", "joqargikenes", 24),
+    ("karakalpakstan", "QResMinistrlerKenesi", 24),
+    ("karakalpakstan", "karinform", 24),
+    ("karakalpakstan", "xaliq_ushin", 24),
+    ("karakalpakstan", "xodjeyli_rk", 24),
+    ("karakalpakstan", "turtkulhokim_uz", 24),
+    ("karakalpakstan", "pressTaqiyatas", 24),
+    ("karakalpakstan", "kanlikulnews", 24),
+    # --- UZBEKISTAN (primary: news media + official bodies) ---
+    ("citizen_uzbekistan", "kunuz", 10),
+    ("citizen_uzbekistan", "kunuzru", 10),
+    ("citizen_uzbekistan", "gazetauz", 10),
+    ("citizen_uzbekistan", "daryo", 10),
+    ("citizen_uzbekistan", "repostuz", 10),
+    ("citizen_uzbekistan", "qalampir", 10),
+    ("citizen_uzbekistan", "uznews", 10),
+    ("citizen_uzbekistan", "uzdaily", 10),
+    ("citizen_uzbekistan", "zaminuz", 12),
+    ("citizen_uzbekistan", "spotuz", 12),
+    ("citizen_uzbekistan", "uzbekistan24", 10),
+    ("citizen_uzbekistan", "bbcuzbek", 24),
+    ("citizen_uzbekistan", "terabaytuz", 24),
+    ("citizen_uzbekistan", "itpark_uz", 24),
     ("citizen_uzbekistan", "Press_Secretary_Uz", 10),
-    ("citizen_uzbekistan", "uzbprokuratura", 10),
+    ("citizen_uzbekistan", "uzbprokuratura", 12),
     ("citizen_uzbekistan", "RaqobatGovUz", 12),
     ("citizen_uzbekistan", "iivuz", 10),
-    ("citizen_uzbekistan", "FAUzbekistan", 12),
+    ("citizen_uzbekistan", "mygovuz", 24),
+    ("citizen_uzbekistan", "yoshlaragentligi", 24),
+    ("citizen_uzbekistan", "uzedu", 24),
+    ("citizen_uzbekistan", "uzreport", 12),
+    ("citizen_uzbekistan", "sportuz", 12),
+    ("citizen_uzbekistan", "fauzbekistan", 12),
+    # --- WORLD (primary: international wires, quality media, science & tech) ---
+    ("world", "bbcrussian", 8),
+    ("world", "dwrussian", 12),
+    ("world", "tass_agency", 8),
+    ("world", "rian_ru", 8),
+    ("world", "rbc_news", 8),
+    ("world", "kommersant", 8),
+    ("world", "vedomosti", 12),
+    ("world", "forbesrussia", 12),
+    ("world", "meduzalive", 12),
+    ("world", "currenttime", 10),
+    ("world", "nexta_live", 8),
+    ("world", "ukrainenow", 8),
+    ("world", "ukr_pravda", 12),
+    ("world", "bbcukrainian", 12),
+    ("world", "trtworld", 10),
+    ("world", "hindustantimes", 8),
+    ("world", "guardian", 10),
+    ("world", "france24_en", 10),
+    ("world", "nhkworld", 12),
+    ("world", "koreatimes", 12),
+    ("world", "allafrica", 10),
+    ("world_tech", "nature", 24),
+    ("world_tech", "nplus1", 24),
+    ("world_tech", "scientificrussia", 24),
+    ("world_tech", "spacenews", 24),
+    ("world_tech", "futurism", 24),
+    ("world_tech", "smithsonianmag", 24),
+    ("world_tech", "nvidia", 24),
+    ("world_tech", "hitech", 12),
+    ("world_tech", "nasa_news", 24),
 ]
 
+# Website / RSS sources (all live-tested 2026-11-04). Format: (category, source_name, rss_url)
 RSS_AND_GLOBAL_FEEDS = [
-    ("world", "bbc.com", "https://feeds.bbci.co.uk/news/world/rss.xml"),
-    ("world_tech", "bbc.com", "https://feeds.bbci.co.uk/news/technology/rss.xml"),
-    ("world", "bbc.com/uzbek", "https://feeds.bbci.co.uk/uzbek/rss.xml"),
-    ("world", "theguardian.com", "https://www.theguardian.com/world/rss"),
-    ("world_tech", "theguardian.com", "https://www.theguardian.com/uk/technology/rss"),
-    ("world", "aljazeera.com", "https://www.aljazeera.com/xml/rss/all.xml"),
-    ("citizen_uzbekistan", "gazeta.uz", "https://www.gazeta.uz/oz/rss/"),
+    # --- KARAKALPAKSTAN ---
+    ("karakalpakstan", "kknews.uz", "https://kknews.uz/qq/feed"),
     ("karakalpakstan", "Google News", "https://news.google.com/rss/search?q=when:12h+(Qoraqalpog%CA%BBiston+OR+Nukus+OR+Qaraqalpaqstan+OR+Karakalpakstan)&hl=uz&gl=UZ&ceid=UZ:uz"),
+    # --- UZBEKISTAN ---
+    ("citizen_uzbekistan", "kun.uz", "https://kun.uz/news/rss"),
+    ("citizen_uzbekistan", "gazeta.uz", "https://www.gazeta.uz/oz/rss/"),
+    ("citizen_uzbekistan", "gazeta.uz", "https://www.gazeta.uz/ru/rss/"),
+    ("citizen_uzbekistan", "daryo.uz", "https://daryo.uz/feed"),
+    ("citizen_uzbekistan", "uzdaily.uz", "https://uzdaily.uz/rss"),
+    ("citizen_uzbekistan", "uza.uz", "https://uza.uz/rss"),
+    ("citizen_uzbekistan", "nuz.uz", "https://nuz.uz/feed"),
+    ("citizen_uzbekistan", "xabar.uz", "https://xabar.uz/rss"),
+    ("citizen_uzbekistan", "spot.uz", "https://spot.uz/rss"),
+    ("citizen_uzbekistan", "aniq.uz", "https://aniq.uz/rss"),
+    ("citizen_uzbekistan", "zamin.uz", "https://zamin.uz/rss"),
+    ("citizen_uzbekistan", "kapital.uz", "https://kapital.uz/feed"),
+    ("citizen_uzbekistan", "bbc.com/uzbek", "https://feeds.bbci.co.uk/uzbek/rss.xml"),
+    # --- WORLD: BBC ---
+    ("world", "bbc.com", "https://feeds.bbci.co.uk/news/world/rss.xml"),
     ("world", "Google News", "https://news.google.com/rss/search?q=when:3h+(site:reuters.com+OR+site:apnews.com)&hl=en-US&gl=US&ceid=US:en"),
+    ("world", "bbc.com", "https://feeds.bbci.co.uk/news/world/asia/rss.xml"),
+    ("world", "bbc.com", "https://feeds.bbci.co.uk/news/world/europe/rss.xml"),
+    ("world", "bbc.com", "https://feeds.bbci.co.uk/news/world/middle_east/rss.xml"),
+    ("world", "bbc.com", "https://feeds.bbci.co.uk/news/world/africa/rss.xml"),
+    ("world", "bbc.com", "https://feeds.bbci.co.uk/news/world/us_and_canada/rss.xml"),
+    ("world", "bbc.com", "https://feeds.bbci.co.uk/news/world/latin_america/rss.xml"),
+    ("world", "bbc.com", "https://feeds.bbci.co.uk/news/health/rss.xml"),
+    ("world", "bbc.com", "https://feeds.bbci.co.uk/news/business/rss.xml"),
+    ("world", "bbc.com/russian", "https://feeds.bbci.co.uk/russian/rss.xml"),
+    ("world", "bbc.com/ukrainian", "https://feeds.bbci.co.uk/ukrainian/rss.xml"),
+    ("world", "bbc.com/turkce", "https://feeds.bbci.co.uk/turkce/rss.xml"),
+    ("world_tech", "bbc.com", "https://feeds.bbci.co.uk/news/technology/rss.xml"),
+    ("world_tech", "bbc.com", "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml"),
+    # --- WORLD: Guardian ---
+    ("world", "theguardian.com", "https://www.theguardian.com/world/rss"),
+    ("world", "theguardian.com", "https://www.theguardian.com/environment/rss"),
+    ("world", "theguardian.com", "https://www.theguardian.com/world/europe-news/rss"),
+    ("world", "theguardian.com", "https://www.theguardian.com/world/asia-pacific/rss"),
+    ("world", "theguardian.com", "https://www.theguardian.com/world/middleeast/rss"),
+    ("world", "theguardian.com", "https://www.theguardian.com/world/africa/rss"),
+    ("world_tech", "theguardian.com", "https://www.theguardian.com/uk/technology/rss"),
+    ("world_tech", "theguardian.com", "https://www.theguardian.com/science/rss"),
+    # --- WORLD: international broadcasters & wires ---
+    ("world", "aljazeera.com", "https://www.aljazeera.com/xml/rss/all.xml"),
+    ("world", "france24.com", "https://www.france24.com/en/rss"),
+    ("world", "euronews.com", "https://www.euronews.com/rss"),
+    ("world", "npr.org", "https://feeds.npr.org/1001/rss.xml"),
+    ("world", "npr.org", "https://feeds.npr.org/1004/rss.xml"),
+    ("world", "nbcnews.com", "https://feeds.nbcnews.com/nbcnews/public/world"),
+    ("world", "abcnews.go.com", "https://abcnews.go.com/abcnews/internationalheadlines"),
+    ("world", "abc.net.au", "https://www.abc.net.au/news/feed/51120/rss.xml"),
+    ("world", "abc.net.au", "https://www.abc.net.au/news/feed/2942460/rss.xml"),
+    ("world", "japantimes.co.jp", "https://www.japantimes.co.jp/feed/"),
+    ("world", "scmp.com", "https://www.scmp.com/rss/91/feed"),
+    ("world", "scmp.com", "https://www.scmp.com/rss/4/feed"),
+    ("world", "straitstimes.com", "https://www.straitstimes.com/news/world/rss.xml"),
+    ("world", "straitstimes.com", "https://www.straitstimes.com/news/asia/rss.xml"),
+    ("world", "channelnewsasia.com", "https://www.channelnewsasia.com/rssfeeds/8395986"),
+    ("world", "thehindu.com", "https://www.thehindu.com/news/international/feeder/default.rss"),
+    ("world", "hindustantimes.com", "https://www.hindustantimes.com/feeds/rss/world-news/rssfeed.xml"),
+    ("world", "timesofindia.com", "https://timesofindia.indiatimes.com/rssfeeds/296589292.cms"),
+    ("world", "indianexpress.com", "https://indianexpress.com/section/world/feed/"),
+    ("world", "ndtv.com", "https://feeds.feedburner.com/ndtvnews-world-news"),
+    ("world", "dawn.com", "https://www.dawn.com/feeds/home"),
+    ("world", "koreatimes.co.kr", "http://www.koreatimes.co.kr/www/rss/world.xml"),
+    ("world", "rte.ie", "https://www.rte.ie/news/rss/news-headlines.xml"),
+    ("world", "nytimes.com", "https://rss.nytimes.com/services/xml/rss/nyt/World.xml"),
+    ("world", "nytimes.com", "https://rss.nytimes.com/services/xml/rss/nyt/Health.xml"),
+    ("world", "nytimes.com", "https://rss.nytimes.com/services/xml/rss/nyt/Business.xml"),
+    ("world", "latimes.com", "https://www.latimes.com/world-nation/rss2.0.xml"),
+    ("world", "foxnews.com", "https://moxie.foxnews.com/google-publisher/world.xml"),
+    ("world", "politico.eu", "https://www.politico.eu/feed/"),
+    ("world", "ft.com", "https://www.ft.com/world?format=rss"),
+    ("world", "bloomberg.com", "https://feeds.bloomberg.com/markets/news.rss"),
+    ("world", "meduza.io", "https://meduza.io/rss/all"),
+    ("world", "meduza.io/en", "https://meduza.io/rss/en/all"),
+    ("world", "kommersant.ru", "https://www.kommersant.ru/RSS/news.xml"),
+    ("world", "vedomosti.ru", "https://www.vedomosti.ru/rss/news"),
+    ("world", "tass.com", "https://tass.com/rss/v2.xml"),
+    ("world", "ria.ru", "https://ria.ru/export/rss2/archive/index.xml"),
+    ("world", "interfax.ru", "https://www.interfax.ru/rss.asp"),
+    ("world", "themoscowtimes.com", "https://www.themoscowtimes.com/rss/news"),
+    ("world", "kyivindependent.com", "https://kyivindependent.com/news-archive/rss/"),
+    ("world", "ukrinform.net", "https://www.ukrinform.net/rss/block-lastnews"),
+    ("world", "pravda.com.ua", "https://www.pravda.com.ua/rss/"),
+    ("world", "unian.net", "https://www.unian.net/rss"),
+    ("world", "trthaber.com", "https://www.trthaber.com/sondakika.rss"),
+    ("world", "dailysabah.com", "https://www.dailysabah.com/rssFeed/world"),
+    ("world", "thenationalnews.com", "https://www.thenationalnews.com/arc/outboundfeeds/rss/?outputType=xml"),
+    ("world", "haaretz.com", "https://www.haaretz.com/srv/haaretz-latest-headlines"),
+    ("world", "middleeasteye.net", "https://www.middleeasteye.net/rss"),
+    ("world", "allafrica.com", "https://allafrica.com/tools/headlines/rdf/latest/headlines.rdf"),
+    ("world", "africanews.com", "https://www.africanews.com/feed/rss"),
+    ("world", "cgtn.com", "https://www.cgtn.com/subscribe/rss/section/world.xml"),
+    ("world", "bangkokpost.com", "https://www.bangkokpost.com/rss/data/topstories.xml"),
+    ("world", "rappler.com", "https://www.rappler.com/feed/"),
+    ("world", "smh.com.au", "https://www.smh.com.au/rss/world.xml"),
+    ("world", "nzherald.co.nz", "https://www.nzherald.co.nz/arc/outboundfeeds/rss/section/world/?outputType=xml"),
+    ("world", "stuff.co.nz", "https://www.stuff.co.nz/rss"),
+    ("world", "globalnews.ca", "https://globalnews.ca/world/feed/"),
+    ("world", "cbc.ca", "https://www.cbc.ca/webfeed/rss/rss-world"),
+    ("world", "batimes.com.ar", "https://www.batimes.com.ar/feed"),
+    ("world", "lemonde.fr", "https://www.lemonde.fr/en/rss/une.xml"),
+    ("world", "spiegel.de", "https://www.spiegel.de/international/index.rss"),
+    ("world", "euractiv.com", "https://www.euractiv.com/feed/"),
+    ("world", "axios.com", "https://www.axios.com/feeds/feed.rss"),
+    ("world", "vox.com", "https://www.vox.com/rss/index.xml"),
+    ("world", "theatlantic.com", "https://www.theatlantic.com/feed/all/"),
+    ("world", "newyorker.com", "https://www.newyorker.com/feed/everything"),
+    ("world", "time.com", "https://time.com/feed/"),
+    ("world", "fortune.com", "https://fortune.com/feed/"),
+    ("world", "businessinsider.com", "https://www.businessinsider.com/rss"),
+    ("world", "cnbc.com", "https://www.cnbc.com/id/100727362/device/rss/rss.html"),
+    ("world", "marketwatch.com", "https://www.marketwatch.com/rss/topstories"),
+    ("world", "skysports.com", "https://www.skysports.com/rss/12040"),
+    ("world", "un.org", "https://news.un.org/feed/subscribe/en/news/all/rss.xml"),
+    # --- WORLD: science, space, health & technology (the "wow" stories) ---
+    ("world_tech", "sciencedaily.com", "https://www.sciencedaily.com/rss/all.xml"),
+    ("world_tech", "phys.org", "https://phys.org/rss-feed/"),
+    ("world_tech", "space.com", "https://www.space.com/feeds/all"),
+    ("world_tech", "nasa.gov", "https://www.nasa.gov/feed/"),
+    ("world_tech", "esa.int", "https://www.esa.int/rssfeed/Our_Activities/Space_News"),
+    ("world_tech", "spacenews.com", "https://spacenews.com/feed/"),
+    ("world_tech", "sciencealert.com", "https://www.sciencealert.com/feed"),
+    ("world_tech", "livescience.com", "https://www.livescience.com/feeds/all"),
+    ("world_tech", "popsci.com", "https://www.popsci.com/feed/"),
+    ("world_tech", "scientificamerican.com", "https://www.scientificamerican.com/platform/syndication/rss/"),
+    ("world_tech", "smithsonianmag.com", "https://www.smithsonianmag.com/rss/latest_articles/"),
+    ("world_tech", "interestingengineering.com", "https://interestingengineering.com/feed"),
+    ("world_tech", "futurism.com", "https://futurism.com/feed"),
+    ("world_tech", "technologyreview.com", "https://www.technologyreview.com/feed/"),
+    ("world_tech", "techcrunch.com", "https://techcrunch.com/feed/"),
+    ("world_tech", "theverge.com", "https://www.theverge.com/rss/index.xml"),
+    ("world_tech", "wired.com", "https://www.wired.com/feed/rss"),
+    ("world_tech", "arstechnica.com", "https://arstechnica.com/feed/"),
+    ("world_tech", "engadget.com", "https://www.engadget.com/rss.xml"),
+    ("world_tech", "cnet.com", "https://www.cnet.com/rss/news/"),
+    ("world_tech", "zdnet.com", "https://www.zdnet.com/news/rss.xml"),
+    ("world_tech", "techradar.com", "https://www.techradar.com/rss"),
+    ("world_tech", "gizmodo.com", "https://gizmodo.com/rss"),
+    ("world_tech", "mashable.com", "https://mashable.com/feeds/rss/all"),
+    ("world_tech", "theregister.com", "https://www.theregister.com/headlines.atom"),
+    ("world_tech", "bleepingcomputer.com", "https://www.bleepingcomputer.com/feed/"),
+    ("world_tech", "thehackernews.com", "https://thehackernews.com/feeds/posts/default"),
+    ("world_tech", "nytimes.com", "https://rss.nytimes.com/services/xml/rss/nyt/Science.xml"),
+    ("world_tech", "nytimes.com", "https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml"),
+    ("world_tech", "nbcnews.com", "https://feeds.nbcnews.com/nbcnews/public/tech"),
+    ("world_tech", "bloomberg.com", "https://feeds.bloomberg.com/technology/news.rss"),
+    ("world_tech", "forbes.com", "https://www.forbes.com/innovation/feed2/"),
 ]
 
-# ALWAYS prioritize flagship unlocked models first (verified from AI Studio: no Paid lock!)
-TEXT_MODELS = [
+# OPEN-WEB DISCOVERY (NOT a limit — these roam the wider internet for stories the fixed
+# lists above may miss). Each query is a Google News search over the last hours.
+# Format: (category, label, search_query)
+OPEN_WEB_QUERIES = [
+    ("karakalpakstan", "open-web", "Qoraqalpog'iston OR Nukus OR Qaraqalpaqstan"),
+    ("karakalpakstan", "open-web", "Karakalpakstan OR Каракалпакстан OR Нукус"),
+    ("citizen_uzbekistan", "open-web", "O'zbekiston yangi qonun OR qaror OR narx OR jarima"),
+    ("citizen_uzbekistan", "open-web", "Узбекистан постановление OR тариф OR штраф OR пособие"),
+    ("citizen_uzbekistan", "open-web", "Uzbekistan accident OR fire OR flood OR earthquake"),
+    ("citizen_uzbekistan", "open-web", "Узбекистан ДТП OR пожар OR отравление OR задержан"),
+    ("world", "open-web", "scientists discover OR \"for the first time\" OR record-breaking"),
+    ("world", "open-web", "plane crash OR earthquake OR explosion OR wildfire"),
+    ("world", "open-web", "health warning OR outbreak OR recall OR study finds"),
+    ("world", "open-web", "company announces OR price hike OR ban OR new rule"),
+    ("world", "open-web", "sports tragedy OR record OR transfer OR final"),
+    ("world_tech", "open-web", "AI breakthrough OR new chip OR robot OR launch"),
+    ("world_tech", "open-web", "scholarship OR grant OR remote job OR free course"),
+    ("world_tech", "open-web", "space mission OR rocket OR asteroid OR telescope"),
+]
+
+
+def open_web_feeds() -> list[tuple[str, str, str]]:
+    feeds: list[tuple[str, str, str]] = []
+    for cat, label, query in OPEN_WEB_QUERIES:
+        q = quote_plus(f"when:12h ({query})")
+        feeds.append((cat, label, f"https://news.google.com/rss/search?q={q}&hl=en-US&gl=US&ceid=US:en"))
+    return feeds
+
+# Smart Free-Tier Quota Routing (Live-Tested against GEMINI_API_KEY):
+# - gemini-3.8-flash: 20 req/day Free Tier cap -> reserve STRICTLY 1 call/hour for primary drafting!
+# - gemini-3.6-flash / gemini-3.5-flash: High all-day Free Tier quota (10x better Karakalpak than -lite)
+# - gemini-3.1-pro-preview / gemini-3-flash-preview / gemini-4-argon: Blocked (limit: 0 / Paid) on Free Tier
+DRAFT_MODELS = [
     "gemini-3.8-flash",
-    "gemini-3.8-flash",  # Retry once on transient 503/429 before falling back
-    "gemini-3.1-pro-preview",
-    "gemini-pro-latest",
+    "gemini-3.6-flash",
+    "gemini-3.5-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite",
+]
+PROOFREAD_MODELS = [
+    "gemini-3.6-flash",
+    "gemini-3.5-flash",
     "gemini-3.5-flash-lite",
     "gemini-3.1-flash-lite",
 ]
 VISION_MODELS = [
-    "gemini-3.8-flash",
-    "gemini-3.1-pro-preview",
+    "gemini-3.6-flash",
+    "gemini-3.5-flash",
     "gemini-3.5-flash-lite",
     "gemini-3.1-flash-lite",
 ]
@@ -206,7 +474,7 @@ def http_get(url: str, timeout: int = 20) -> requests.Response | None:
 
 
 def fetch_existing_channel_posts() -> tuple[list[str], set[str]]:
-    """Scrape @qrjanaliq public feed + local cache to prevent duplicate stories & topics."""
+    """Layer 1: Scrape 2 full pages of @qaraqalpaqshajanaliqlar (~40 live posts = 2+ days) + local cache."""
     recent_summaries: list[str] = []
     seen_urls: set[str] = set()
 
@@ -214,23 +482,54 @@ def fetch_existing_channel_posts() -> tuple[list[str], set[str]]:
         try:
             cached = json.loads(HISTORY_FILE.read_text(encoding="utf-8"))
             seen_urls.update(cached.get("urls", []))
-            recent_summaries.extend(cached.get("titles", [])[-35:])
+            recent_summaries.extend(cached.get("titles", [])[-40:])
         except Exception:
             pass
 
-    resp = http_get("https://t.me/s/qrjanaliq")
-    if resp:
-        soup = BeautifulSoup(resp.text, "html.parser")
-        for msg in soup.select(".tgme_widget_message")[-28:]:
+    def _extract_from_soup(soup: BeautifulSoup) -> tuple[list[str], int | None]:
+        page_summaries: list[str] = []
+        oldest_id: int | None = None
+        for msg in soup.select(".tgme_widget_message"):
+            post_attr = msg.get("data-post", "")
+            if "/" in post_attr:
+                try:
+                    pid = int(post_attr.split("/")[-1])
+                    if oldest_id is None or pid < oldest_id:
+                        oldest_id = pid
+                except ValueError:
+                    pass
             txt_el = msg.select_one(".tgme_widget_message_text")
             if txt_el:
                 txt = txt_el.get_text(" ", strip=True)
-                recent_summaries.append(txt[:420])
+                if len(txt) > 30:
+                    page_summaries.append(txt[:420])
                 for a_tag in txt_el.select("a[href]"):
                     href = a_tag.get("href", "").strip()
-                    if href and "t.me/qrjanaliq" not in href:
+                    if href and "t.me/qaraqalpaqshajanaliqlar" not in href:
                         seen_urls.add(normalize_url(href))
-    return recent_summaries[-40:], seen_urls
+        return page_summaries, oldest_id
+
+    resp = http_get("https://t.me/s/qaraqalpaqshajanaliqlar")
+    if resp:
+        soup1 = BeautifulSoup(resp.text, "html.parser")
+        page1_summaries, oldest = _extract_from_soup(soup1)
+        if oldest and oldest > 1:
+            prev_resp = http_get(f"https://t.me/s/qaraqalpaqshajanaliqlar?before={oldest}")
+            if prev_resp:
+                prev_summaries, _ = _extract_from_soup(BeautifulSoup(prev_resp.text, "html.parser"))
+                recent_summaries.extend(prev_summaries)
+        recent_summaries.extend(page1_summaries)
+
+    # Deduplicate summaries while preserving order
+    deduped_summaries: list[str] = []
+    seen_txt: set[str] = set()
+    for s in recent_summaries:
+        key = s[:120].lower()
+        if key not in seen_txt:
+            seen_txt.add(key)
+            deduped_summaries.append(s)
+
+    return deduped_summaries[-45:], seen_urls
 
 
 def scrape_telegram_channel(category: str, channel: str, max_age_hours: int) -> list[dict[str, Any]]:
@@ -395,10 +694,35 @@ def scrape_kun_uz() -> list[dict[str, Any]]:
     return items
 
 
-def scrape_rss_and_global_feeds() -> list[dict[str, Any]]:
+def parse_pub_datetime(raw: str) -> datetime | None:
+    """Parse RSS/ISO publication dates into aware UTC datetimes (None if unparseable)."""
+    raw = (raw or "").strip()
+    if not raw:
+        return None
+    dt: datetime | None = None
+    try:
+        dt = parsedate_to_datetime(raw)
+    except Exception:
+        try:
+            dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        except Exception:
+            return None
+    if dt is not None and dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
+RSS_MAX_AGE_HOURS = 18
+RSS_ITEMS_PER_FEED = 3
+
+
+def scrape_rss_and_global_feeds(
+    feeds: list[tuple[str, str, str]] | None = None,
+) -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
     ns = {"media": "http://search.yahoo.com/mrss/"}
-    for cat, default_src, rss_url in RSS_AND_GLOBAL_FEEDS:
+    rss_cutoff = datetime.now(timezone.utc) - timedelta(hours=RSS_MAX_AGE_HOURS)
+    for cat, default_src, rss_url in (feeds if feeds is not None else RSS_AND_GLOBAL_FEEDS):
         resp = http_get(rss_url)
         if not resp:
             continue
@@ -406,14 +730,24 @@ def scrape_rss_and_global_feeds() -> list[dict[str, Any]]:
             root = ET.fromstring(resp.content)
         except Exception:
             continue
-        for item in root.findall("./channel/item")[:7]:
-            title = (item.findtext("title") or "").strip()
-            raw_desc = (item.findtext("description") or "").strip()
+        taken = 0
+        entries = root.findall("./channel/item") or root.findall(".//{http://www.w3.org/2005/Atom}entry")
+        for item in entries:
+            if taken >= RSS_ITEMS_PER_FEED:
+                break
+            title = (item.findtext("title") or item.findtext("{http://www.w3.org/2005/Atom}title") or "").strip()
+            raw_desc = (item.findtext("description") or item.findtext("{http://www.w3.org/2005/Atom}summary") or "").strip()
             desc = BeautifulSoup(raw_desc, "html.parser").get_text(" ", strip=True)
             link = (item.findtext("link") or "").strip()
+            if not link:
+                atom_link = item.find("{http://www.w3.org/2005/Atom}link")
+                link = (atom_link.get("href") if atom_link is not None else "") or ""
             if "bbc.co.uk" in link:
                 link = link.split("?")[0].replace("bbc.co.uk", "bbc.com")
-            pub = (item.findtext("pubDate") or "").strip()
+            pub = (item.findtext("pubDate") or item.findtext("{http://www.w3.org/2005/Atom}updated") or "").strip()
+            pub_dt = parse_pub_datetime(pub)
+            if pub_dt and pub_dt < rss_cutoff:
+                continue
             src_el = item.find("source")
             src_name = src_el.text.strip() if src_el is not None and src_el.text else default_src
 
@@ -434,17 +768,73 @@ def scrape_rss_and_global_feeds() -> list[dict[str, Any]]:
                     photos.append(u)
 
             if title and link:
+                taken += 1
                 items.append(
                     {
                         "category": cat,
                         "source_name": src_name,
                         "url": link,
-                        "published_at": pub,
+                        "published_at": pub_dt.isoformat() if pub_dt else pub,
                         "text": f"{title}\n{desc}"[:1200],
                         "photo_urls": photos[:3],
                     }
                 )
     return items
+
+
+def scrape_all_sources_parallel() -> list[dict[str, Any]]:
+    """Scan every Telegram channel + RSS website + open-web query concurrently (fast & fault-tolerant)."""
+    tasks: list[Any] = []
+    out: list[dict[str, Any]] = []
+    with ThreadPoolExecutor(max_workers=16) as pool:
+        tasks.append(pool.submit(scrape_kknews))
+        tasks.append(pool.submit(scrape_kun_uz))
+        for cat, ch, hrs in TELEGRAM_SOURCES:
+            tasks.append(pool.submit(scrape_telegram_channel, cat, ch, hrs))
+        for feed in RSS_AND_GLOBAL_FEEDS + open_web_feeds():
+            tasks.append(pool.submit(scrape_rss_and_global_feeds, [feed]))
+        for t in tasks:
+            try:
+                out.extend(t.result(timeout=240))
+            except Exception as exc:
+                print(f"[WARN] A source task failed and was skipped: {exc}")
+    return out
+
+
+def build_balanced_candidate_pool(
+    candidates: list[dict[str, Any]], limit: int = 60
+) -> list[dict[str, Any]]:
+    """Round-robin by category (Karakalpakstan / Uzbekistan / World / Tech), newest first,
+    max 2 stories per source, so no single huge feed can crowd out the rest."""
+    quotas = {"karakalpakstan": 14, "citizen_uzbekistan": 18, "world": 18, "world_tech": 10}
+    by_cat: dict[str, list[dict[str, Any]]] = {}
+    for c in candidates:
+        by_cat.setdefault(c.get("category", "world"), []).append(c)
+
+    def sort_key(c: dict[str, Any]) -> float:
+        dt = parse_pub_datetime(c.get("published_at", ""))
+        return dt.timestamp() if dt else 0.0
+
+    pool: list[dict[str, Any]] = []
+    seen_urls: set[str] = set()
+    for cat, items in by_cat.items():
+        items.sort(key=sort_key, reverse=True)
+        per_source: dict[str, int] = {}
+        taken = 0
+        for c in items:
+            key = normalize_url(c["url"])
+            if key in seen_urls:
+                continue
+            src = c.get("source_name", "")
+            if per_source.get(src, 0) >= 2:
+                continue
+            seen_urls.add(key)
+            per_source[src] = per_source.get(src, 0) + 1
+            pool.append(c)
+            taken += 1
+            if taken >= quotas.get(cat, 10):
+                break
+    return pool[:limit]
 
 
 def generate_content_with_fallback(
@@ -472,6 +862,48 @@ def generate_content_with_fallback(
     raise RuntimeError(f"All fallback models failed: {last_err}")
 
 
+
+DICTIONARY_FILE = Path("qq_dictionary.json")
+_QQ_DICT_CACHE: dict[str, dict[str, str]] | None = None
+
+
+def load_qq_dictionary() -> dict[str, dict[str, str]]:
+    global _QQ_DICT_CACHE
+    if _QQ_DICT_CACHE is not None:
+        return _QQ_DICT_CACHE
+    if DICTIONARY_FILE.exists():
+        try:
+            _QQ_DICT_CACHE = json.loads(DICTIONARY_FILE.read_text(encoding="utf-8"))
+            print(f"[DICT] Loaded {len(_QQ_DICT_CACHE)} verified dictionary entries from {DICTIONARY_FILE}")
+            return _QQ_DICT_CACHE
+        except Exception as exc:
+            print(f"[WARN] Failed to load {DICTIONARY_FILE}: {exc}")
+    _QQ_DICT_CACHE = {}
+    return _QQ_DICT_CACHE
+
+
+def extract_dictionary_glossary_for_text(text: str, limit: int = 40) -> str:
+    """Find words in candidate story that match Turabaev dictionary and build a prompt glossary."""
+    d = load_qq_dictionary()
+    if not d:
+        return ""
+    words = re.findall(r"[а-яёa-z]{4,}", text.lower())
+    found: list[str] = []
+    seen = set()
+    for w in words:
+        if w in d and w not in seen:
+            seen.add(w)
+            lat_trans = d[w].get("qq_lat", "")
+            if lat_trans and not lat_trans.startswith("sm."):
+                found.append(f"- {w} => {lat_trans}")
+        if len(found) >= limit:
+            break
+    if not found:
+        return ""
+    joined = "\n".join(found)
+    return f"VERIFIED TURABAEV DICTIONARY TRANSLATIONS (MANDATORY TO USE FOR THESE TERMS):\n{joined}"
+
+
 def curate_and_write_posts(
     client: genai.Client,
     candidates: list[dict[str, Any]],
@@ -481,30 +913,43 @@ def curate_and_write_posts(
     playbook = Path("TASK_INSTRUCTIONS.md").read_text(encoding="utf-8") if Path("TASK_INSTRUCTIONS.md").exists() else ""
 
     prompt = f"""
-You are the Editor-in-Chief and Doctor of Karakalpak Philology for the Telegram channel QARAQALPAQSTAN JAN'ALIQLARI (@qrjanaliq).
+You are the Editor-in-Chief and Doctor of Karakalpak Philology for the Telegram channel Qaraqalpaqsha jan'aliqlar (@qaraqalpaqshajanaliqlar).
 
 {OFFICIAL_KARAKALPAK_ALPHABET_RULES}
 
 STRICT EDITORIAL PLAYBOOK:
 {playbook[:5000]}
 
-ALREADY PUBLISHED ON @qrjanaliq (STRICT SEMANTIC DEDUPLICATION — NEVER repeat ANY topic, law, number, person, or event already covered below, even if the URL or source channel is different!):
+ALREADY PUBLISHED ON @qaraqalpaqshajanaliqlar (STRICT SEMANTIC DEDUPLICATION — NEVER repeat ANY topic, law, number, person, or event already covered below, even if the URL or source channel is different!):
 {json.dumps(existing_posts, ensure_ascii=False, indent=2)}
 
 CANDIDATE STORIES FROM LIVE OFFICIAL & GLOBAL FEEDS:
 {json.dumps([{ "idx": i, "url": c["url"], "category": c["category"], "source_name": c["source_name"], "has_photo": bool(c.get("photo_urls")), "text": c["text"][:1000] } for i, c in enumerate(candidates)], ensure_ascii=False, indent=2)}
 
+{extract_dictionary_glossary_for_text(" ".join(c["text"] for c in candidates))}
+
+SOURCE POLICY:
+- The candidate list comes from a PRIMARY list of Karakalpak, Uzbek and world Telegram channels + news websites, plus open-web discovery searches (`source_name` = "open-web"). These lists are NOT a limit: every candidate is equally eligible, and open-web items may be chosen when they are the most interesting AND come from a reliable outlet.
+- Reliability: prefer official sources, wires and established media. For sensational or unverified claims (deaths, disasters, scandals, health scares) require a reputable source in `source_name`/`url`; never invent or "round up" facts, numbers, names or quotes. If a number is not in the candidate text, do not write it.
+
+EDITORIAL STYLE — "interesting first" (the style of fast, curiosity-driven news channels, NOT of dry bureaucratic reposts):
+- Choose stories people will want to read AND forward: accidents and disasters, world events, money and rules that change daily life (prices, fines, tariffs, benefits, deadlines), health and safety warnings, weather changes, science/tech/AI surprises, scholarships and remote jobs, sports tragedies and records, first-in-history facts, strange-but-true stories.
+- Treat a weather change, a price/rule change or a safety warning with the SAME weight as a government event. Do NOT pick routine items such as "a meeting was held", ceremonies, delegations, awards/placings of one student or athlete in a minor contest — UNLESS there is a striking angle (first-ever, record, big prize, Karakalpakstan pride, large money, many people affected).
+- HEADLINE = the concrete event with its strongest detail (who/what/how many), in correct Karakalpak. Good pattern (describe in Karakalpak, do not copy literally): "A business jet crashed in Florida, nine dead", "A Spanish footballer died after a collision with the goalkeeper", "The emergency ministry asked people to check their chimneys". Bad pattern: "A meeting was held", "A ceremony took place".
+- BODY = 2–4 short sentences with the exact numbers/names/places from the candidate, then (when natural) ONE short human or safety line (what people should do / why it matters to them).
+- Mix of topics across the batch: at most ONE routine-official story per batch; at least one story that touches daily life or safety; world/science/tech stories are welcome in every batch.
+
 YOUR TASK:
-1. Select the TOP {ask_count} completely NEW, non-duplicate, high-interest stories (aiming for a strong mix across Karakalpakstan, Citizen Legal/Utility or Uzbekistan important news, and World/Tech exclusive stories).
-   - Double-check against ALREADY PUBLISHED ON @qrjanaliq: if a story is about the same event/law (e.g. 350 kVt electricity limit, 4-day parent school holiday leave, Nukus Chemistry Olympiad, Cannavaro, Asian Cup 2027, Swiss Ambassador at School #34, China Eastern Airlines), SKIP IT!
+1. Select the TOP {ask_count} completely NEW, non-duplicate, most interesting stories following the style above (mix of Karakalpakstan, Uzbekistan daily-life/legal/safety, and World/Tech).
+   - Double-check against ALREADY PUBLISHED ON @qaraqalpaqshajanaliqlar: if a story is about the same event/law (e.g. 350 kVt electricity limit, 4-day parent school holiday leave, Nukus Chemistry Olympiad, Cannavaro, Asian Cup 2027, Swiss Ambassador at School #34, China Eastern Airlines), SKIP IT!
    - Strongly prefer candidates where `has_photo` is true or whose `url` is a direct web article (not `news.google.com`).
 2. Write each caption in 100% pure, natural, literary KARAKALPAK LATIN following the Official 34-Letter Alphabet above.
-   - Keep visible text between 360 and 820 characters.
-   - Use ONLY valid Telegram HTML tags: `<b>...</b>`, `<blockquote>...</blockquote>`, `<a href="...">...</a>`.
-   - Lead with ONE fitting emoji (`⚡️`, `🚨`, `❓`, `🔰`, `🚀`, `🏆`, `🚛`, `💻`) + `<b>Headline</b>`.
-   - End EVERY caption with these exact two lines (using the EXACT `url` of THAT SAME `idx` candidate!):
-Deregi: <a href="EXACT_CANDIDATE_URL">SHORT_SOURCE_LABEL</a>
-👉 <a href="https://t.me/qrjanaliq">@qrjanaliq — aǵza bolıw</a>
+   - Keep visible text between 300 and 700 characters (short and scannable).
+   - Use ONLY valid Telegram HTML tags: `<b>...</b>`, `<i>...</i>`, `<blockquote>...</blockquote>`, `<a href="...">...</a>`.
+   - Lead with ONE fitting emoji (`⚡️`, `🚨`, `❓`, `🔰`, `🚀`, `🏆`, `🚛`, `💻`, `⚠️`, `🌍`) + `<b>Headline</b>`.
+   - Put the source link on ONE KEY WORD inside the body text (an `<a href="EXACT_CANDIDATE_URL">key word</a>` around a natural word of the sentence) using the EXACT `url` of THAT SAME `idx` candidate. NO long source footers.
+   - End EVERY caption with exactly this one line:
+👉 <a href="https://t.me/qaraqalpaqshajanaliqlar">@qaraqalpaqshajanaliqlar — aǵza bolıw</a>
 
 Return ONLY a JSON array of objects with keys:
 - "candidate_idx": integer (MUST match the exact `idx` of the story you wrote about!)
@@ -515,7 +960,7 @@ Return ONLY a JSON array of objects with keys:
 
     resp = generate_content_with_fallback(
         client,
-        TEXT_MODELS,
+        DRAFT_MODELS,
         prompt,
         types.GenerateContentConfig(
             response_mime_type="application/json",
@@ -534,30 +979,35 @@ Return ONLY a JSON array of objects with keys:
     return parsed
 
 
-def proofread_karakalpak_captions(client: genai.Client, items: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Dedicated 2nd-pass literary Karakalpak proofreader using the Official 34-Letter Alphabet."""
+def proofread_karakalpak_captions(
+    client: genai.Client, items: list[dict[str, Any]], existing_posts: list[str]
+) -> list[dict[str, Any]]:
+    """Layer 3: 2nd-pass literary Karakalpak proofreader + semantic duplicate blocker."""
     if not items:
         return items
     try:
         proof_prompt = f"""
-You are a strict Karakalpak language proofreader verifying Telegram HTML captions against the Official 34-Letter Karakalpak Alphabet.
+You are a strict Karakalpak language proofreader and semantic deduplication gate for @qaraqalpaqshajanaliqlar.
 
 {OFFICIAL_KARAKALPAK_ALPHABET_RULES}
 
-Inspect each caption_html in the JSON array below and fix ANY:
-1. Alphabet/spelling errors (`Shveysariya/Shveyariya` -> `Shveycariya`, missing `c` in `-ciya` words, missing `ń` in `-nıń/-niń/-dıń/-diń/-tıń/-tiń`, wrong `ı` vs `i`, wrong `ǵ/ń/á/ó/ú/w`).
-2. Kazakhisms (`joba/jobalar` -> `joybar/joybarlar`, `baǵıtlanǵan` -> `baǵdarlanǵan`) or Uzbekisms (`ulanbaǵan` -> `jalǵanbaǵan`, `Muxtar elshi` -> `Tolıq huqıqlı elshi`, `tuman` -> `rayon`, `viloyat` -> `wálayat`).
-3. Vowel harmony errors (`gazlespegen` -> `gazlastırılmaǵan`) or singular/plural mistakes (`Nókis qalalarındaǵı` -> `Nókis qalasındaǵı`).
-4. Preserve all HTML tags (`<b>`, `<blockquote>`, `<a href="...">`), URLs, numbers, and the `Deregi:` + `@qrjanaliq` footer intact!
+ALREADY PUBLISHED ON @qaraqalpaqshajanaliqlar:
+{json.dumps(existing_posts[-40:], ensure_ascii=False, indent=2)}
+
+Inspect each item in INPUT JSON below:
+1. Set `"is_duplicate": true` if the story covers the SAME event, law, decree, tournament arrival, hack/incident, or topic already in ALREADY PUBLISHED ON @qaraqalpaqshajanaliqlar (even if from a different source or follow-up angle). Otherwise `"is_duplicate": false`.
+2. Fix ANY Karakalpak alphabet or spelling errors (`Shveysariya` -> `Shveycariya`, `epitsentr` -> `epicentr`, forbidden `Ç/ç` -> `Ch/ch`, forbidden `İ` -> `I`, `g'/o'` -> `ǵ/ó`, missing `ń` in `-nıń/-niń/-dıń/-diń/-tıń/-tiń`, wrong `ı` vs `i`, wrong `ǵ/ń/á/ó/ú/w`).
+3. Fix ANY Kazakhisms (`joba/jobalar` -> `joybar/joybarlar`, `arıza` -> `arza`, `baǵıtlanǵan` -> `baǵdarlanǵan`) or Uzbekisms (`zilzila` -> `jer silkiniwi`, `jánivor/jonivor` -> `janzat`, `sayyora` -> `planeta`, `tezyurar` -> `tez júrer`, `ulkan` -> `úlken`, `iqtidarlı` -> `uqıplı`, `moslasqan` -> `maslasqan`, `ommalastırıw` -> `ǵalabalastırıw`, `taqdimatı` -> `tanıstırıw máresimi`, `ulanbaǵan` -> `jalǵanbaǵan`, `Muxtar elshi` -> `Tolıq huqıqlı elshi`, `tuman` -> `rayon`, `viloyat` -> `wálayat`, `dástúr` when meaning program -> `baǵdarlama`).
+4. preserve all HTML tags (`<b>`, `<i>`, `<blockquote>`, `<a href="...">`), URLs, numbers, and the closing `@qaraqalpaqshajanaliqlar` line intact!
 
 INPUT JSON:
 {json.dumps([{"i": idx, "caption_html": it.get("caption_html", "")} for idx, it in enumerate(items)], ensure_ascii=False, indent=2)}
 
-Return ONLY a JSON array of objects `[{{"i": 0, "caption_html": "..."}}, ...]`.
+Return ONLY a JSON array of objects `[{{"i": 0, "is_duplicate": false, "caption_html": "..."}}, ...]`.
 """
         resp = generate_content_with_fallback(
             client,
-            TEXT_MODELS,
+            PROOFREAD_MODELS,
             proof_prompt,
             types.GenerateContentConfig(
                 response_mime_type="application/json",
@@ -568,16 +1018,61 @@ Return ONLY a JSON array of objects `[{{"i": 0, "caption_html": "..."}}, ...]`.
         if raw.startswith("```"):
             raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.DOTALL).strip()
         fixed_list = json.loads(raw)
+        duplicate_indices: set[int] = set()
         if isinstance(fixed_list, list):
             for entry in fixed_list:
                 pos = entry.get("i")
+                if not isinstance(pos, int) or not (0 <= pos < len(items)):
+                    continue
+                if entry.get("is_duplicate") is True:
+                    print(f"[DEDUP] Layer 3 AI proofreader blocked semantic duplicate at index {pos}.")
+                    duplicate_indices.add(pos)
+                    continue
                 new_cap = entry.get("caption_html")
-                if isinstance(pos, int) and 0 <= pos < len(items) and isinstance(new_cap, str) and len(new_cap) > 120:
+                if isinstance(new_cap, str) and len(new_cap) > 120:
                     items[pos]["caption_html"] = new_cap
+        if duplicate_indices:
+            items = [it for idx, it in enumerate(items) if idx not in duplicate_indices]
         time.sleep(1.5)
     except Exception as exc:
         print(f"[WARN] Second-pass proofreader skipped ({exc}); relying on deterministic fixes.")
     return items
+
+
+STOP_STEMS = {
+    "qaraqa", "ózbek", "ozbeks", "respub", "deregi", "qrjana", "bolıw", "ushın",
+    "menen", "boyın", "haqqın", "málim", "xabar", "tárepi", "sonday", "ekenin",
+}
+
+
+def _extract_stems_and_numbers(text: str) -> tuple[set[str], set[str]]:
+    lower = text.lower()
+    words = re.findall(r"[a-záóúıǵń]{5,}", lower)
+    stems = {w[:6] for w in words if w[:6] not in STOP_STEMS}
+    nums = {
+        n for n in re.findall(r"\b\d{2,}\b", lower)
+        if n not in {"2025", "2026", "2027", "103", "104", "1050", "1268"}
+    }
+    return stems, nums
+
+
+def is_text_duplicate_of_existing(visible_text: str, existing_texts: list[str]) -> bool:
+    """Layer 4: Deterministic Karakalpak word-stem + 2+ digit number overlap gate (>= 0.45)."""
+    cand_stems, cand_nums = _extract_stems_and_numbers(visible_text)
+    if len(cand_stems) < 5:
+        return False
+    for prev in existing_texts:
+        prev_stems, prev_nums = _extract_stems_and_numbers(prev)
+        if len(prev_stems) < 5:
+            continue
+        denom = min(len(cand_stems), len(prev_stems))
+        stem_overlap = len(cand_stems & prev_stems) / max(denom, 1)
+        shared_nums = cand_nums & prev_nums
+        score = stem_overlap + (0.12 * min(len(shared_nums), 2))
+        if score >= 0.45:
+            print(f"[DEDUP] Layer 4 blocked overlap ({score:.2f}, shared_nums={shared_nums}): {prev[:90]}...")
+            return True
+    return False
 
 
 def transliterate_and_fix_outside_tags(html_text: str) -> str:
@@ -610,8 +1105,8 @@ def sanitize_and_validate_caption(caption: str) -> str | None:
     if CYRILLIC_RE.search(visible_text):
         print(f"[WARN] Unmapped Cyrillic still present, rejecting: {CYRILLIC_RE.findall(visible_text)}")
         return None
-    if "@qrjanaliq" not in caption:
-        caption = caption.rstrip() + '\n👉 <a href="https://t.me/qrjanaliq">@qrjanaliq — aǵza bolıw</a>'
+    if "@qaraqalpaqshajanaliqlar" not in caption:
+        caption = caption.rstrip() + '\n👉 <a href="https://t.me/qaraqalpaqshajanaliqlar">@qaraqalpaqshajanaliqlar — aǵza bolıw</a>'
     return caption
 
 
@@ -626,7 +1121,7 @@ def resolve_candidate_for_item(item: dict[str, Any], candidates: list[dict[str, 
     cap = item.get("caption_html") or ""
     for m in re.findall(r'href="([^"]+)"', cap):
         nm = normalize_url(m)
-        if "t.me/qrjanaliq" in nm:
+        if "t.me/qaraqalpaqshajanaliqlar" in nm:
             continue
         for c in candidates:
             if normalize_url(c["url"]) == nm or normalize_url(c.get("fallback_post_url", "")) == nm:
@@ -766,42 +1261,43 @@ def main() -> int:
     bot_token, chat_id, gemini_key, max_posts = load_config()
     client = genai.Client(api_key=gemini_key)
 
-    print("[1/5] Checking @qrjanaliq live feed for deduplication...")
+    print("[1/5] Checking @qaraqalpaqshajanaliqlar live feed for deduplication...")
     existing_posts, seen_urls = fetch_existing_channel_posts()
     print(f"      Found {len(existing_posts)} recent channel posts & {len(seen_urls)} seen URLs.")
 
-    print("[2/5] Scanning global & official Karakalpak/Uzbek feeds...")
-    raw_candidates: list[dict[str, Any]] = []
-    raw_candidates.extend(scrape_kknews())
-    for cat, ch, hrs in TELEGRAM_SOURCES:
-        raw_candidates.extend(scrape_telegram_channel(cat, ch, hrs))
-    raw_candidates.extend(scrape_kun_uz())
-    raw_candidates.extend(scrape_rss_and_global_feeds())
+    print(
+        f"[2/5] Scanning {len(TELEGRAM_SOURCES)} Telegram channels + {len(RSS_AND_GLOBAL_FEEDS)} website feeds "
+        f"+ {len(OPEN_WEB_QUERIES)} open-web discovery queries (primary lists, not a limit)..."
+    )
+    raw_candidates: list[dict[str, Any]] = scrape_all_sources_parallel()
+    print(f"      Raw stories scanned: {len(raw_candidates)}")
 
-    candidates = [
+    fresh_candidates = [
         c
         for c in raw_candidates
         if normalize_url(c["url"]) not in seen_urls
         and normalize_url(c.get("fallback_post_url", "")) not in seen_urls
-    ][:45]
+        and not any(normalize_url(ext) in seen_urls for ext in c.get("external_links", []))
+    ]
+    candidates = build_balanced_candidate_pool(fresh_candidates, limit=60)
     print(f"      Collected {len(candidates)} fresh unseen candidate stories.")
     if not candidates:
         print("[DONE] No unseen stories right now.")
         return 0
 
     ask_count = min(max_posts + 2, 5)
-    print(f"[3/5] Curating & drafting Karakalpak Latin posts with Gemini 3.8 Flash (target={max_posts}, pool={ask_count})...")
+    print(f"[3/5] Curating & drafting Karakalpak Latin posts with flagship Gemini (target={max_posts}, pool={ask_count})...")
     selected = curate_and_write_posts(client, candidates, existing_posts, ask_count)
     time.sleep(1.5)
 
-    print("[4/5] Proofreading captions against Official 34-Letter Karakalpak Alphabet & literary grammar...")
-    selected = proofread_karakalpak_captions(client, selected)
+    print("[4/5] Proofreading captions & checking semantic duplicates against Official 34-Letter Alphabet...")
+    selected = proofread_karakalpak_captions(client, selected, existing_posts)
 
     published_count = 0
     new_urls = list(seen_urls)
     new_titles = list(existing_posts)
 
-    print("[5/5] Verifying exact photo match & publishing to @qrjanaliq...")
+    print("[5/5] Verifying exact photo match, overlap gate & publishing to @qaraqalpaqshajanaliqlar...")
     for item in selected:
         if published_count >= max_posts:
             break
@@ -811,6 +1307,9 @@ def main() -> int:
             continue
         caption = sanitize_and_validate_caption(item.get("caption_html", ""))
         if not caption:
+            continue
+        plain_caption = BeautifulSoup(caption, "html.parser").get_text(" ", strip=True)
+        if is_text_duplicate_of_existing(plain_caption, new_titles):
             continue
 
         photo_bytes = get_clean_photo_for_post(
@@ -823,7 +1322,7 @@ def main() -> int:
         res = send_telegram_photo(bot_token, chat_id, photo_bytes, caption)
         if res.get("ok"):
             msg_id = res["result"]["message_id"]
-            print(f"[OK] Published https://t.me/qrjanaliq/{msg_id} -> {cand['url']}")
+            print(f"[OK] Published https://t.me/qaraqalpaqshajanaliqlar/{msg_id} -> {cand['url']}")
             published_count += 1
             new_urls.append(normalize_url(cand["url"]))
             if cand.get("fallback_post_url"):
