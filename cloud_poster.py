@@ -198,8 +198,6 @@ AUTO_WORD_FIXES = [
     (r"\bOrın aldı\b", "Júz berdi"),
     (r"\bmúmkindik\b", "múmkinshilik"),
     (r"\bMúmkindik\b", "Múmkinshilik"),
-    (r"\btártipti\b", "tártipli"),
-    (r"\bTártipti\b", "Tártipli"),
     (r"\bquwattı\b", "quwatlı"),
     (r"\bQuwattı\b", "Quwatlı"),
     (r"\bjıynalıs\b", "májilis"),
