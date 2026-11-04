@@ -151,6 +151,12 @@ AUTO_WORD_FIXES = [
     (r"\bjonivor", "janzat"),
     (r"\bchuvalchangsimon\b", "qurt tárizli"),
     (r"\bsayyora\b", "planeta"),
+    (r"\bq[aá]wipti\b", "qáwipli"),
+    (r"\bQ[aá]wipti\b", "Qáwipli"),
+    (r"\bavto[- ]gaz\b", "avtogaz"),
+    (r"\bAvto[- ]gaz\b", "Avtogaz"),
+    (r"\bturmıs gaz\b", "turmıslıq gaz"),
+    (r"\bTurmıs gaz\b", "Turmıslıq gaz"),
 ]
 
 # ======================================================================================
