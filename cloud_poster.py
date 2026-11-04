@@ -503,7 +503,7 @@ def load_config() -> tuple[str, str, str, int]:
     bot_token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
     chat_id = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
     gemini_key = os.environ.get("GEMINI_API_KEY", "").strip()
-    max_posts = int(os.environ.get("MAX_POSTS", "2"))
+    max_posts = int(os.environ.get("MAX_POSTS", "1"))
 
     local_cfg = Path("telegram_config.json")
     if (not bot_token or not chat_id) and local_cfg.exists():
@@ -638,6 +638,16 @@ def scrape_telegram_channel(category: str, channel: str, max_age_hours: int) -> 
             if m and m.group(1) not in photo_urls:
                 photo_urls.append(m.group(1))
 
+        video_urls = []
+        for v_el in msg.select("video.tgme_widget_message_video, video"):
+            src = v_el.get("src", "").strip()
+            if src and src.startswith("http") and src not in video_urls:
+                video_urls.append(src)
+        for v_wrap in msg.select(".tgme_widget_message_video_player .tgme_widget_message_video_thumb"):
+            m = BG_URL_RE.search(v_wrap.get("style", ""))
+            if m and m.group(1) not in photo_urls:
+                photo_urls.append(m.group(1))
+
         primary_doc = next((u for u in external_links if "lex.uz/docs/" in u or "my.gov.uz/" in u), None)
         items.append(
             {
@@ -649,6 +659,7 @@ def scrape_telegram_channel(category: str, channel: str, max_age_hours: int) -> 
                 "published_at": pub_dt.isoformat() if pub_dt else "",
                 "text": text[:1500],
                 "photo_urls": photo_urls[:4],
+                "video_urls": video_urls[:2],
             }
         )
     return items
@@ -937,26 +948,115 @@ def load_qq_dictionary() -> dict[str, dict[str, str]]:
     return _QQ_DICT_CACHE
 
 
-def extract_dictionary_glossary_for_text(text: str, limit: int = 40) -> str:
-    """Find words in candidate story that match Turabaev dictionary and build a prompt glossary."""
-    d = load_qq_dictionary()
-    if not d:
-        return ""
-    words = re.findall(r"[а-яёa-z]{4,}", text.lower())
+
+# ======================================================================================
+# UZBEK -> KARAKALPAK NEWS TERMINOLOGY BRIDGE (Prevents Uzbekism/Kazakhism leaks)
+# ======================================================================================
+UZ_TO_QQ_NEWS_BRIDGE: dict[str, str] = {
+    "talonchilik": "basqınshılıq, tonawshılıq (NEVER talonshılıq)",
+    "bosqinchilik": "basqınshılıq",
+    "qidiruv": "izlestiriw, qıdırıw (NEVER izertlew)",
+    "tezkor-qidiruv": "jedel-qıdırıw, jedel-izlestiriw",
+    "shirinliklar": "shıyrinlikler, tatlılıqlar (NEVER shirinlikler)",
+    "shirinlik": "shıyrinlik, tatlılıq",
+    "xavfli": "qáwipli (NEVER qáwipti)",
+    "xavf": "qáwip",
+    "xavfsizlik": "qáwipsizlik",
+    "avto-gaz": "avtogaz",
+    "reja": "joybar (loyiha mánisinde), reje (reje mánisinde)",
+    "rejalar": "joybarlar, rejeler",
+    "loyiha": "joybar",
+    "loyihasi": "joybarı",
+    "loyihalar": "joybarlar",
+    "dastur": "baǵdarlama",
+    "dasturi": "baǵdarlaması",
+    "tashrif": "sapar",
+    "tashrif buyurdi": "sapar etti, keldi",
+    "uchrashuv": "ushırasıw",
+    "uchrashdi": "ushırastı",
+    "yig'ilish": "májilis (NEVER jıynalıs)",
+    "majlis": "májilis",
+    "tadbir": "ilaj",
+    "tadbirlar": "ilajlar",
+    "chora-tadbirlar": "ilajlar",
+    "vafot etdi": "qaytıs boldı, kóz jumdı",
+    "halok bo'ldi": "halak boldı",
+    "jarohatlandi": "jarahatlandı",
+    "jarima": "járiyma",
+    "javobgarlik": "juwapkershilik",
+    "javobgarlikka tortildi": "juwapkershilikke tartıldı",
+    "qamoqqa olindi": "qamaqqa alındı",
+    "qo'lga olindi": "qolǵa alındı",
+    "tezkor": "jedel",
+    "tekshiruv": "tekseriw, kózden keshiriw",
+    "aniqlandi": "anıqlandı",
+    "belgilandi": "belgilendi",
+    "joriy etildi": "engizildi",
+    "qabul qilindi": "qabıl etildi",
+    "amalga oshirildi": "ámelge asırıldı",
+    "amalga oshirilmoqda": "ámelge asırılmaqta",
+    "muhim": "áhmiyetli",
+    "asosiy": "tiykarǵı",
+    "hamkorlik": "birge islesiw",
+    "rivojlantirish": "rawajlandırıw",
+    "boshqarma": "basqarma",
+    "vazirlik": "ministrlik",
+    "viloyat": "wálayat",
+    "tuman": "rayon",
+    "xodim": "xızmetker",
+    "hodisa": "hádiyse",
+    "yuz berdi": "júz berdi, bolıp ótti (NEVER orın aldı)",
+    "yuzaga keldi": "payda boldı",
+    "sarflandi": "sarplap etildi, jumsaldı",
+    "mablag'": "qarjı",
+    "narx": "baha",
+    "oshdi": "arttı, ósti",
+    "kamaydi": "azaydı",
+    "ta'minlash": "támiyinlew",
+    "yetkazib berish": "jetkerip beriw",
+    "ishlab chiqarish": "islep shıǵarıw",
+    "bo'yicha": "boyınsha",
+    "haqida": "haqqında, tuwralı",
+    "to'g'risida": "tuwralı, haqqında",
+    "uchun": "ushın",
+    "bilan": "menen",
+    "lekin": "biraq",
+    "ammo": "biraq",
+    "chunki": "sebebi, óytkeni",
+}
+
+
+def extract_dictionary_glossary_for_text(text: str, limit: int = 50) -> str:
+    """Find words in candidate story matching Russian dictionary OR Uzbek-QQ Bridge."""
+    text_lower = text.lower()
     found: list[str] = []
     seen = set()
-    for w in words:
-        if w in d and w not in seen:
-            seen.add(w)
-            lat_trans = d[w].get("qq_lat", "")
-            if lat_trans and not lat_trans.startswith("sm."):
-                found.append(f"- {w} => {lat_trans}")
-        if len(found) >= limit:
+
+    # 1. Match Uzbek news terminology bridge
+    for uz_word, qq_trans in UZ_TO_QQ_NEWS_BRIDGE.items():
+        if uz_word in text_lower and uz_word not in seen:
+            seen.add(uz_word)
+            found.append(f"- [UZ] {uz_word} => [QQ] {qq_trans}")
+        if len(found) >= 25:
             break
+
+    # 2. Match Russian Turabaev dictionary
+    d = load_qq_dictionary()
+    if d:
+        ru_words = re.findall(r"[а-яё]{4,}", text_lower)
+        for w in ru_words:
+            if w in d and w not in seen:
+                seen.add(w)
+                lat_trans = d[w].get("qq_lat", "")
+                if lat_trans and not lat_trans.startswith("sm."):
+                    found.append(f"- [RU] {w} => [QQ] {lat_trans}")
+            if len(found) >= limit:
+                break
+
     if not found:
         return ""
     joined = "\n".join(found)
-    return f"VERIFIED TURABAEV DICTIONARY TRANSLATIONS (MANDATORY TO USE FOR THESE TERMS):\n{joined}"
+    return f"MANDATORY DICTIONARY & TERMINOLOGY GLOSSARY (YOU MUST USE THESE EXACT KARAKALPAK TERMS):\n{joined}"
 
 
 def curate_and_write_posts(
@@ -1297,6 +1397,45 @@ def get_clean_photo_for_post(
     return None
 
 
+def send_telegram_video(bot_token: str, chat_id: str, video_url: str, caption_html: str) -> dict[str, Any]:
+    url = f"https://api.telegram.org/bot{bot_token}/sendVideo"
+    try:
+        # First try passing direct URL to Telegram Bot API
+        resp = requests.post(
+            url,
+            data={
+                "chat_id": chat_id,
+                "parse_mode": "HTML",
+                "caption": caption_html,
+                "video": video_url,
+            },
+            timeout=40,
+        )
+        data = resp.json()
+        if data.get("ok"):
+            return data
+        
+        # Fallback: stream download and upload
+        v_resp = requests.get(video_url, stream=True, timeout=20, headers={"User-Agent": "Mozilla/5.0"})
+        if v_resp.status_code == 200 and int(v_resp.headers.get("content-length", 0)) < 45 * 1024 * 1024:
+            v_bytes = v_resp.content
+            if len(v_bytes) > 10000:
+                resp2 = requests.post(
+                    url,
+                    data={
+                        "chat_id": chat_id,
+                        "parse_mode": "HTML",
+                        "caption": caption_html,
+                    },
+                    files={"video": ("news.mp4", v_bytes, "video/mp4")},
+                    timeout=60,
+                )
+                return resp2.json()
+    except Exception as exc:
+        print(f"[WARN] send_telegram_video exception: {exc}")
+    return {"ok": False}
+
+
 def send_telegram_photo(bot_token: str, chat_id: str, photo_bytes: bytes, caption_html: str) -> dict[str, Any]:
     url = f"https://api.telegram.org/bot{bot_token}/sendPhoto"
     resp = requests.post(
@@ -1367,14 +1506,23 @@ def main() -> int:
         if is_text_duplicate_of_existing(plain_caption, new_titles):
             continue
 
-        photo_bytes = get_clean_photo_for_post(
-            client, cand, caption, item.get("wikimedia_search_keywords", "")
-        )
-        if not photo_bytes:
-            print(f"[SKIP] Could not obtain clean related photo for {cand['url']}; trying backup story.")
-            continue
+        res = None
+        video_urls = cand.get("video_urls", [])
+        if video_urls:
+            print(f"[MEDIA] Found video for {cand['url']}, trying to post video...")
+            res = send_telegram_video(bot_token, chat_id, video_urls[0], caption)
+            if not res or not res.get("ok"):
+                print(f"[WARN] Video send failed ({res}), falling back to verified photo.")
+                res = None
 
-        res = send_telegram_photo(bot_token, chat_id, photo_bytes, caption)
+        if not res or not res.get("ok"):
+            photo_bytes = get_clean_photo_for_post(
+                client, cand, caption, item.get("wikimedia_search_keywords", "")
+            )
+            if not photo_bytes:
+                print(f"[SKIP] Could not obtain clean related photo for {cand['url']}; trying backup story.")
+                continue
+            res = send_telegram_photo(bot_token, chat_id, photo_bytes, caption)
         if res.get("ok"):
             msg_id = res["result"]["message_id"]
             print(f"[OK] Published https://t.me/qaraqalpaqshajanaliqlar/{msg_id} -> {cand['url']}")
