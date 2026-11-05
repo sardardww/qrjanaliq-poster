@@ -63,10 +63,22 @@ jobs:
       # 10 minutes after this run started, then dispatch the next run.
       - name: Chain next run in 10 minutes
         if: always()
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           ELAPSED=$(( $(date +%s) - START_TS ))
           WAIT=$(( 600 - ELAPSED ))
-          if [ $WAIT -gt 0 ]; then sleep $WAIT; fi
-          gh workflow run auto_post.yml --ref main --repo ${{ github.repository }}
+          if [ $WAIT -gt 0 ]; then
+            echo "Waiting ${WAIT}s to reach exactly 10-minute cadence..."
+            sleep $WAIT
+          fi
+          for i in 1 2 3; do
+            echo "Dispatching next run (attempt $i)..."
+            if gh workflow run auto_post.yml --ref main --repo ${{ github.repository }}; then
+              echo "Next run dispatched successfully!"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Warning: Self-chain dispatch had an issue, fallback to scheduled cron."
