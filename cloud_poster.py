@@ -1674,11 +1674,17 @@ FORBIDDEN_ROOTS_CHECK = [
 ]
 
 def format_caption_with_direct_source_link(caption: str, exact_url: str, source_name: str = "") -> str:
-    """Enforces that the exact direct source link is prominently placed on the focus keyword and at the end."""
+    """Enforces that the exact direct source link is wrapped on ONLY ONE prominent focus word/verb in the text."""
     if not exact_url:
         return caption
 
     caption = caption.strip()
+
+    # Strip any redundant Derek/Tolıq maǵlıwmat lines
+    caption = re.sub(r'(?i)\n*Tolıq\s+maǵlıwmat(?:lar)?(?:\s+(?:ushın|bul jerde))?[.:]?', '', caption)
+    caption = re.sub(r'(?i)\n*🔗\s*(?:Derek|Tolıq maǵlıwmat)[^\n]*', '', caption)
+    caption = re.sub(r'(?i)\n*Derek\s*:[^\n]*', '', caption)
+
     soup = BeautifulSoup(caption, "html.parser")
     
     # Check if external link already exists in body
@@ -1693,8 +1699,9 @@ def format_caption_with_direct_source_link(caption: str, exact_url: str, source_
     if has_external_link:
         caption = str(soup)
     else:
+        # Wrap exactly ONE prominent focus verb / keyword in body
         focus_verbs = [
-            r"\b(juwmaqlaw múddetlerin|málim etti|málim qılındı|málimleme berdi|xabar berildi|xabar berilmekte|xabarladı|eskertti|kútilmekte|engiziledi|tastıyıqlandı|belgilendi|aytıp ótti|dáwirinde|sheshimi qabıllandı)\b"
+            r"\b(juwmaqlaw múddetlerin|málim etti|málim qılındı|málimleme berdi|xabar berildi|xabar berilmekte|xabarladı|eskertti|kútilmekte|engiziledi|engizildi|tastıyıqlandı|belgilendi|aytıp ótti|dáwirinde|sheshimi qabıllandı)\b"
         ]
         wrapped_body = False
         for pat in focus_verbs:
@@ -1711,7 +1718,7 @@ def format_caption_with_direct_source_link(caption: str, exact_url: str, source_
                 lead_text = lead_match.group(2).strip()
                 words = lead_text.split()
                 if len(words) >= 4:
-                    raw_chunk = " ".join(words[-3:])
+                    raw_chunk = " ".join(words[-2:])
                     target_chunk = raw_chunk.rstrip(".,;:!?")
                     start_pos = caption.find(raw_chunk, lead_match.start())
                     if start_pos != -1:
@@ -1719,18 +1726,10 @@ def format_caption_with_direct_source_link(caption: str, exact_url: str, source_
                         caption = caption[:start_pos] + f'<a href="{exact_url}">{target_chunk}</a>{trailing}' + caption[start_pos + len(raw_chunk):]
                         wrapped_body = True
 
-    sig_pattern = r'(👉\s*<a\s+href="https://t\.me/qaraqalpaqshajanaliqlar">.*?</a>|@qaraqalpaqshajanaliqlar)'
-    src_label = f"Derek ({source_name.strip()})" if source_name.strip() else "Tolıq maǵlıwmat"
-    
-    if "Derek" not in caption and "Tolıq maǵlıwmat" not in caption:
-        sig_match = re.search(sig_pattern, caption)
-        if sig_match:
-            insert_idx = sig_match.start()
-            caption = caption[:insert_idx].rstrip() + f'\n\n🔗 <a href="{exact_url}">{src_label}</a>\n' + caption[insert_idx:]
-        else:
-            caption = caption.rstrip() + f'\n\n🔗 <a href="{exact_url}">{src_label}</a>\n👉 <a href="https://t.me/qaraqalpaqshajanaliqlar">@qaraqalpaqshajanaliqlar — aǵza bolıw</a>'
+    if "@qaraqalpaqshajanaliqlar" not in caption:
+        caption = caption.rstrip() + '\n👉 <a href="https://t.me/qaraqalpaqshajanaliqlar">@qaraqalpaqshajanaliqlar — aǵza bolıw</a>'
 
-    return caption
+    return caption.strip()
 
 
 def audit_and_enforce_karakalpak_quality(caption: str, cand: dict[str, Any]) -> str | None:
