@@ -1503,16 +1503,17 @@ Every single post MUST be structured as a compelling multi-paragraph journalisti
 
 👉 <a href="https://t.me/qaraqalpaqshajanaliqlar">@qaraqalpaqshajanaliqlar — aǵza bolıw</a>
 
-CRITICAL FORMATTING INSTRUCTIONS:
+CRITICAL FORMATTING INSTRUCTIONS (MAINTAIN PROFESSIONAL BALANCE — DO NOT OVERDO EMOJIS OR QUESTIONS):
 1. LEAD HEADLINE:
-   - Begin with the country flag if relevant (e.g. 🇵🇹, 🇺🇿, 🇺🇸, 🇰🇿, 🇨🇳, 🇷🇺, 🇩🇪, 🇬🇧, 🇹🇷, 🇫🇷, 🇯🇵) OR a single relevant topical icon (🚀, 🏆, 🧬, 💻, 🚗, ⚖️, 🚨, ⚽️, 🛍).
+   - Use Country Flag ONLY if the story is directly related to a specific country (e.g. 🇵🇹, 🇺🇿, 🇰🇿, 🇨🇳, 🇺🇸).
+   - If not a country story, use a single fitting icon ONLY when truly natural, or LEAVE EMPTY ("") for formal news. DO NOT force emojis on every post!
    - Headline in bold: <b>Заголовок на русском</b>. Followed by a blank line (\n\n).
 2. PARAGRAPH 1 (Core News + Hook Details):
    - Rich factual storytelling with exact ages, dates, club/agency names, quotes in «...», and numbers/stats.
    - Embed the exact direct source link ONTO ONE natural action verb or keyword before the period: e.g. <a href="EXACT_CANDIDATE_URL">объявил</a> or <a href="EXACT_CANDIDATE_URL">сообщили</a>. Followed by a blank line (\n\n).
-3. PARAGRAPH 2 (Context + INTERACTIVE ENGAGEMENT QUESTION):
-   - Background context or significance, followed by an INTERACTIVE QUESTION addressed to the reader (e.g. «А вы хоть раз пользовались...?», «Как думаете, справедливое ли это решение?», «А что вы думаете по этому поводу?»). This drives comments and community discussion!
-   - EXCEPTION FOR TRAGEDIES: If the story is about a deadly disaster, fatal crash, or death, DO NOT ask casual interactive questions! Keep it strictly respectful and factual.
+3. PARAGRAPH 2 (Context, Background & Significance):
+   - Context, historical background, significance, or next steps.
+   - INTERACTIVE QUESTIONS: USE VERY SPARINGLY (only in ~20% of posts where truly organic, e.g. consumer opinions on a new app). In standard news (official laws, economics, science, accidents, announcements), DO NOT force questions! A purely informative conclusion is often much better and more professional.
 4. STRICT: ZERO BULLET POINTS! Absolutely NEVER use bullet lists (🔹, ▪️, ➖, •, etc.)! Everything must be fluent, engaging narrative prose.
 5. STRICT: NO SEPARATE SOURCE LINE! NEVER add "Источник:", "Derek:", or "Подробнее:". The link is embedded in the narrative.
 6. CLOSING FOOTER:
@@ -1531,10 +1532,10 @@ STRICT CONTENT BAN:
 Return ONLY a JSON array of objects with keys:
 - "candidate_idx": integer (MUST match the exact `idx` of the story you wrote about!)
 - "source_url": string (MUST equal `candidates[candidate_idx]["url"]`!)
-- "lead_emoji": string (Country flag e.g. 🇺🇿, 🇵🇹, 🇰🇿, 🇨🇳, 🇺🇸, 🇩🇪 or single topical icon 🚀, ⚽️, 🛍, 💻, 🏆, ⚖️, 🚨)
+- "lead_emoji": string (Country flag if country-specific e.g. 🇺🇿, 🇵🇹, 🇰🇿, 🇨🇳, or single fitting icon, or empty string "" if formal/serious)
 - "headline_ru": string (Engaging hook headline in Russian, plain text, NO emoji, NO tags)
 - "paragraph1_ru": string (Paragraph 1 in Russian: core event details, ages, dates, quotes in «...», exact numbers)
-- "paragraph2_ru": string (Paragraph 2 in Russian: context, background, PLUS interactive question to the readers)
+- "paragraph2_ru": string (Paragraph 2 in Russian: context, background, and ONLY IF truly organic, a reader question; otherwise factual conclusion)
 - "wikimedia_search_keywords": string (2-3 simple English nouns for backup photo search)
 """
 
@@ -1599,8 +1600,9 @@ Return ONLY a JSON array of objects with keys:
         clean_headline = re.sub(r'^[^\w\s]+', '', tr_headline).strip().rstrip(".")
         clean_headline = re.sub(r'<[^>]+>', '', clean_headline).strip()
 
+        lead_str = f"{lead_emoji} " if lead_emoji.strip() else ""
         body_parts = [
-            f"{lead_emoji} <b>{clean_headline}</b>",
+            f"{lead_str}<b>{clean_headline}</b>",
             tr_p1.strip()
         ]
         if tr_p2.strip():
