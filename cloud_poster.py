@@ -950,8 +950,6 @@ def scrape_all_sources_parallel() -> list[dict[str, Any]]:
     tasks: list[Any] = []
     out: list[dict[str, Any]] = []
     with ThreadPoolExecutor(max_workers=16) as pool:
-        tasks.append(pool.submit(scrape_kknews))
-        tasks.append(pool.submit(scrape_kun_uz))
         for cat, ch, hrs in TELEGRAM_SOURCES:
             tasks.append(pool.submit(scrape_telegram_channel, cat, ch, hrs))
         for feed in RSS_AND_GLOBAL_FEEDS + open_web_feeds():
@@ -965,22 +963,46 @@ def scrape_all_sources_parallel() -> list[dict[str, Any]]:
 
 
 def build_balanced_candidate_pool(
-    candidates: list[dict[str, Any]], limit: int = 60
+    candidates: list[dict[str, Any]], limit: int = 64
 ) -> list[dict[str, Any]]:
-    """Round-robin by category (Karakalpakstan / Uzbekistan / World / Tech), newest first,
-    max 2 stories per source, so no single huge feed can crowd out the rest."""
-    quotas = {"karakalpakstan": 14, "citizen_uzbekistan": 18, "world": 18, "world_tech": 10}
-    by_cat: dict[str, list[dict[str, Any]]] = {}
+    """Round-robin by category with heavy discouragement of repetitive aggregators (kun.uz, KarPressa, kknews),
+    strict commercial ad filtering, and strong boost for authentic primary world, tech, and official gazettes."""
+    quotas = {
+        "world": 25,
+        "world_tech": 18,
+        "karakalpakstan": 10,
+        "citizen_uzbekistan": 10
+    }
+    
+    # Filter out commercial advertisements
+    filtered: list[dict[str, Any]] = []
     for c in candidates:
+        txt = c.get("text", "")
+        if COMMERCIAL_AD_REGEX.search(txt):
+            continue
+        filtered.append(c)
+
+    by_cat: dict[str, list[dict[str, Any]]] = {}
+    for c in filtered:
         by_cat.setdefault(c.get("category", "world"), []).append(c)
 
     def sort_key(c: dict[str, Any]) -> float:
         dt = parse_pub_datetime(c.get("published_at", ""))
-        return dt.timestamp() if dt else 0.0
+        score = dt.timestamp() if dt else 0.0
+        src = c.get("source_name", "").lower()
+        if src in DISCOURAGED_SOURCES or any(d in src for d in ["kun.uz", "kknews", "karpress"]):
+            score -= 100000.0  # Heavily penalize overused aggregators
+        elif src in AUTHENTIC_SOURCES or any(a in src for a in ["nasa", "nature", "reuters", "bbc", "guardian", "techcrunch", "uza.uz", "xaliq_ushin", "joqargikenes"]):
+            score += 50000.0   # Heavily boost primary authentic sources
+        return score
 
     pool: list[dict[str, Any]] = []
     seen_urls: set[str] = set()
-    for cat, items in by_cat.items():
+    total_discouraged_taken = 0
+    MAX_DISCOURAGED_TOTAL = 1  # At most 1 item from discouraged aggregators in the whole pool!
+
+    for cat in ["world", "world_tech", "karakalpakstan", "citizen_uzbekistan"]:
+        items = by_cat.get(cat, [])
         items.sort(key=sort_key, reverse=True)
         per_source: dict[str, int] = {}
         taken = 0
@@ -988,15 +1010,26 @@ def build_balanced_candidate_pool(
             key = normalize_url(c["url"])
             if key in seen_urls:
                 continue
-            src = c.get("source_name", "")
-            if per_source.get(src, 0) >= 2:
-                continue
+            src = c.get("source_name", "").lower()
+            is_discouraged = src in DISCOURAGED_SOURCES or any(d in src for d in ["kun.uz", "kknews", "karpress"])
+            if is_discouraged:
+                if total_discouraged_taken >= MAX_DISCOURAGED_TOTAL:
+                    continue
+                if per_source.get(src, 0) >= 1:
+                    continue
+            else:
+                if per_source.get(src, 0) >= 2:
+                    continue
+            
             seen_urls.add(key)
             per_source[src] = per_source.get(src, 0) + 1
+            if is_discouraged:
+                total_discouraged_taken += 1
             pool.append(c)
             taken += 1
             if taken >= quotas.get(cat, 10):
                 break
+
     return pool[:limit]
 
 
@@ -1295,6 +1328,27 @@ def extract_dictionary_glossary_for_text(text: str, limit: int = 50) -> str:
 # ======================================================================================
 # STRICT CONTENT SAFETY FILTER: ZERO TOLERANCE FOR RAPE / SEXUAL VIOLENCE
 # ======================================================================================
+COMMERCIAL_AD_REGEX = re.compile(
+    r"(?i)\b(reklama|reklamasi|aksiya|chegirma|skidka|homiylik|hamkorlik\s+asosida|narxi\s+\d+|sotuvda|buyurtma\s+berish|promokod|manzilimiz|telefon:\s*\+?\d|shoshiling|cheklangan\s+miqdorda|arzon\s+narx|dokonimiz|dúkanımız|murojaat\s+uchun)\b"
+)
+
+DISCOURAGED_SOURCES = {
+    "kun.uz", "kunuz", "kunuzru",
+    "kknews.uz", "kknews_uz",
+    "karpressa", "karpress"
+}
+
+AUTHENTIC_SOURCES = {
+    "xaliq_ushin", "joqargikenes", "qresministrlerkenesi", "jaslar_isleri_agentligi",
+    "krbajixana", "turtkulhokim_uz", "presstaqiyatas", "kanlikulnews", "xodjeyli_rk",
+    "uza.uz", "press_secretary_uz", "uzbprokuratura", "raqobatgovuz", "mygovuz",
+    "yoshlaragentligi", "uzedu", "itpark_uz", "spot.uz", "gazeta.uz", "bbc.com/uzbek",
+    "reuters", "bbc", "bbc.com", "theguardian", "theguardian.com", "aljazeera", "france24",
+    "dw", "euronews", "apnews", "nasa", "nasa.gov", "esa.int", "nature", "space.com",
+    "spacenews", "sciencedaily", "phys.org", "sciencealert", "livescience", "techcrunch",
+    "theverge", "wired", "arstechnica", "technologyreview", "futurism", "interestingengineering"
+}
+
 BANNED_VIOLENCE_REGEX = re.compile(
     r"\b(изнасилован\w*|изнасиловал\w*|педофил\w*|сексуальн\w+\s+насили\w*|развратн\w+\s+действи\w*|"
     r"zo['ʻʼ]?rlash\w*|nomusiga\s+teg\w*|pedofil\w*|jinsiy\s+zo['ʻʼ]?ravonlik\w*|"
@@ -1363,11 +1417,34 @@ def curate_and_write_posts(
     candidates: list[dict[str, Any]],
     existing_posts: list[str],
     ask_count: int,
+    target_category_hint: str = "",
 ) -> list[dict[str, Any]]:
     playbook = Path("TASK_INSTRUCTIONS.md").read_text(encoding="utf-8") if Path("TASK_INSTRUCTIONS.md").exists() else ""
 
+    rotation_mandate = ""
+    if target_category_hint == "world_or_tech":
+        rotation_mandate = """
+*** CRITICAL TOPIC ROTATION (WORLD / SCIENCE & TECH MANDATE) ***:
+The previous post on @qaraqalpaqshajanaliqlar covered a local/regional item.
+For this batch, you MUST select an extraordinary, high-interest WORLD or SCIENCE/TECH story (categories 'world' or 'world_tech')!
+Examples: space mission / James Webb discovery, AI / robotics milestone, unusual medical or scientific breakthrough, shocking global natural event, or high-stakes international news.
+DO NOT pick a routine local repost for this batch!
+"""
+    elif target_category_hint == "local":
+        rotation_mandate = """
+*** CRITICAL TOPIC ROTATION (AUTHENTIC LOCAL / CITIZEN LIFE MANDATE) ***:
+The previous post on @qaraqalpaqshajanaliqlar covered world/tech news.
+For this batch, choose an authentic Karakalpakstan or Uzbekistan public/legal update (category 'karakalpakstan' or 'citizen_uzbekistan') from a primary official source (e.g. UzA, ministries, district councils).
+"""
+
     prompt = f"""
 You are the Editor-in-Chief and Doctor of Karakalpak Philology for the Telegram channel Qaraqalpaqsha jan'aliqlar (@qaraqalpaqshajanaliqlar).
+
+{rotation_mandate}
+
+AUTHENTIC SOURCES ONLY — STRICT DISCOURAGEMENT OF AGGREGATORS & ZERO ADS:
+- Heavily DISCOURAGE selecting from kun.uz, KarPressa, or kknews.uz! They have been severely overused. Strongly favor primary authentic web portals, official gazettes, and international science/world wires (NASA, Nature, ScienceDaily, BBC, Reuters, Guardian, TechCrunch, UzA, etc.).
+- ZERO ADVERTISING: Absolutely NEVER choose commercial advertisements, store discounts, product promos, or sponsored real estate announcements.
 
 {OFFICIAL_KARAKALPAK_ALPHABET_RULES}
 
@@ -1988,13 +2065,35 @@ def main() -> int:
         print("[DONE] No unseen stories right now.")
         return 0
 
+    # Smart Dynamic Category Alternator: 50/50 balance between World/Tech and Local Authentic
+    last_post_text = existing_posts[0] if existing_posts else ""
+    is_last_local = bool(re.search(
+        r"(?i)\b(ózbek|ozbek|qaraqalpaq|nókis|nokis|tashkent|toshkent|wálayat|walayat|hákim|hakim|ministr|respublika|samarqand|buxoro|andijon|qaraqalpaqstan|fergana|namangan|qashqadaryo|surxondaryo|jizzax|sirdaryo|navoiy|xorazm)\w*",
+        last_post_text
+    ))
+    target_hint = "world_or_tech" if is_last_local else "local"
+    print(f"      [ROTATION ENGINE] Last post was local={is_last_local} -> Target for this run: {target_hint.upper()}")
+
     ask_count = min(max_posts + 2, 5)
     print(f"[3/5] Curating & drafting Karakalpak Latin posts with flagship Gemini (target={max_posts}, pool={ask_count})...")
-    selected = curate_and_write_posts(client, candidates, existing_posts, ask_count)
+    selected = curate_and_write_posts(client, candidates, existing_posts, ask_count, target_hint)
     time.sleep(1.5)
 
     print("[4/5] Proofreading captions & checking semantic duplicates against Official 34-Letter Alphabet...")
     selected = proofread_karakalpak_captions(client, selected, existing_posts)
+
+    # Prioritize items matching our target category
+    def item_pref_key(it: dict[str, Any]) -> int:
+        cand_temp = resolve_candidate_for_item(it, candidates)
+        if not cand_temp:
+            return 99
+        c_cat = cand_temp.get("category", "")
+        if target_hint == "world_or_tech":
+            return 0 if c_cat in ("world", "world_tech") else 1
+        else:
+            return 0 if c_cat in ("karakalpakstan", "citizen_uzbekistan") else 1
+
+    selected.sort(key=item_pref_key)
 
     published_count = 0
     new_urls = list(seen_urls)
