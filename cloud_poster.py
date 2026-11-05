@@ -1335,7 +1335,7 @@ def translate_post_via_custom_api(text: str, timeout: int = 45, retries: int = 2
     """Translates Russian news caption into Karakalpak Latin using user's dedicated Render API."""
     if not text or not text.strip():
         return text
-    payload = {"text": text, "target_script": "latin"}
+    payload = {"text": text, "target_script": "latin", "model": "gemini-3.1-flash-lite"}
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
         KARAKALPAK_TRANSLATOR_API_URL,
