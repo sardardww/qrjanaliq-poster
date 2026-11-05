@@ -1396,7 +1396,7 @@ def translate_post_via_custom_api(text: str, timeout: int = 45, retries: int = 2
     STRICT POLICY: If Tilmoch translation fails, return None so the post is SKIPPED without arbitrary posting."""
     if not text or not text.strip():
         return None
-    payload = {"text": text, "target_script": "latin", "model": "gemini-3.1-flash-lite"}
+    payload = {"text": text, "target_script": "latin", "model": "auto"}
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
         KARAKALPAK_TRANSLATOR_API_URL,
@@ -1472,22 +1472,41 @@ SOURCE POLICY:
 EDITORIAL STYLE — "interesting first" (the style of fast, curiosity-driven news channels, NOT of dry bureaucratic reposts):
 - Choose stories people will want to read AND forward: accidents and disasters, world events, money and rules that change daily life (prices, fines, tariffs, benefits, deadlines), health and safety warnings, weather changes, science/tech/AI surprises, scholarships and remote jobs, sports tragedies and records, first-in-history facts, strange-but-true stories.
 - Treat a weather change, a price/rule change or a safety warning with the SAME weight as a government event. Do NOT pick routine items such as "a meeting was held", ceremonies, delegations, awards/placings of one student or athlete in a minor contest — UNLESS there is a striking angle (first-ever, record, big prize, Karakalpakstan pride, large money, many people affected).
-- HEADLINE = the concrete event with its strongest detail (who/what/how many), in correct Karakalpak. Good pattern (describe in Karakalpak, do not copy literally): "A business jet crashed in Florida, nine dead", "A Spanish footballer died after a collision with the goalkeeper", "The emergency ministry asked people to check their chimneys". Bad pattern: "A meeting was held", "A ceremony took place".
-- BODY = 2–4 short sentences with the exact numbers/names/places from the candidate, then (when natural) ONE short human or safety line (what people should do / why it matters to them).
 - Mix of topics across the batch: at most ONE routine-official story per batch; at least one story that touches daily life or safety; world/science/tech stories are welcome in every batch.
-- MANDATORY SOURCE DIVERSITY: You MUST pick candidates from completely DIFFERENT sources! Diversify across Karakalpakstan district/regional channels (KarPressa, xaliq_ushin, Turtkul, Taqiyatash, kknews), Uzbekistan official ministries/legal portals (lex.uz, huquqiyaxborot, gov.uz), and World/Tech outlets. NEVER pick multiple stories from the same news outlet!
+- MANDATORY SOURCE DIVERSITY: You MUST pick candidates from completely DIFFERENT sources! Diversify across Karakalpakstan district/regional channels, Uzbekistan official ministries/legal portals (lex.uz, huquqiyaxborot, gov.uz), and World/Tech outlets. NEVER pick multiple stories from the same news outlet!
+
+MANDATORY JOURNALISTIC MULTI-PARAGRAPH HOOK TEMPLATE (STRICTLY REQUIRED):
+Every single post MUST be structured as a compelling multi-paragraph journalistic story (like @quloqnews):
+
+[Model Structure Example]:
+🇵🇹 <b>Криштиану Роналду объявил о завершении карьеры в сборной Португалии</b>
+
+41-летний нападающий саудовского «Аль-Насра» <a href="EXACT_CANDIDATE_URL">объявил</a> об уходе из национальной команды в Instagram, опубликовав большое видео. «Португалия навсегда останется во мне», — написал футболист. Роналду дебютировал за сборную 20 августа 2003 года в товарищеском матче против Казахстана и за 234 встречи забил 146 голов, а также отдал 45 результативных передач.
+
+В составе Португалии Роналду выиграл Евро-2016 и дважды стал победителем Лиги наций УЕФА — в сезонах 2018/2019 и 2024/2025.
+
+👉 <a href="https://t.me/qaraqalpaqshajanaliqlar">@qaraqalpaqshajanaliqlar — aǵza bolıw</a>
+
+CRITICAL FORMATTING INSTRUCTIONS:
+1. LEAD HEADLINE:
+   - Begin with the country flag if the story is related to a specific country (e.g. 🇵🇹, 🇺🇿, 🇺🇸, 🇰🇿, 🇨🇳, 🇷🇺, 🇩🇪, 🇬🇧, 🇹🇷, 🇫🇷, 🇯🇵) OR a single relevant topical icon (🚀, 🏆, 🧬, 💻, 🚗, ⚖️, 🚨, ⚽️).
+   - Headline in bold: <b>Заголовок на русском</b>. Followed by a blank line (\n\n).
+2. PARAGRAPH 1 (Core News + Hook Details):
+   - Rich factual storytelling with exact ages, dates, club/agency names, quotes in «...», and numbers/stats.
+   - Embed the exact direct source link ONTO ONE natural action verb or keyword before the period: e.g. <a href="EXACT_CANDIDATE_URL">объявил</a> or <a href="EXACT_CANDIDATE_URL">сообщил</a>. Followed by a blank line (\n\n).
+3. PARAGRAPH 2 (Context, History, Background & Significance):
+   - Historical context, previous tournament titles, background facts, career milestones, or societal importance. Followed by a blank line (\n\n).
+4. STRICT: ZERO BULLET POINTS! Absolutely NEVER use bullet lists (🔹, ▪️, ➖, •, etc.)! Everything must be fluent, engaging narrative prose.
+5. STRICT: NO SEPARATE SOURCE LINE! NEVER add "Источник:", "Derek:", or "Подробнее:". The link is embedded in the narrative.
+6. CLOSING FOOTER:
+👉 <a href="https://t.me/qaraqalpaqshajanaliqlar">@qaraqalpaqshajanaliqlar — aǵza bolıw</a>
+7. LENGTH: Visible Russian text between 450 and 800 characters.
 
 YOUR TASK:
 1. Select the TOP {ask_count} completely NEW, non-duplicate, most interesting stories following the style above (mix of Karakalpakstan, Uzbekistan daily-life/legal/safety, and World/Tech).
    - Double-check against ALREADY PUBLISHED ON @qaraqalpaqshajanaliqlar: if a story is about the same event/law (e.g. 350 kVt electricity limit, 4-day parent school holiday leave, Nukus Chemistry Olympiad, Cannavaro, Asian Cup 2027, Swiss Ambassador at School #34, China Eastern Airlines), SKIP IT!
    - Strongly prefer candidates where `has_photo` is true or whose `url` is a direct web article (not `news.google.com`).
-2. Write each caption in fluent, crystal-clear, factual RUSSIAN (it will be translated into 100% pure Karakalpak Latin via our dedicated neural translation API):
-   - Keep visible text between 300 and 700 characters (short, concrete numbers, names, and scannable).
-   - Use ONLY valid Telegram HTML tags: `<b>...</b>`, `<i>...</i>`, `<blockquote>...</blockquote>`, `<a href="...">...</a>`.
-   - Lead with ONE fitting emoji (`⚡️`, `🚨`, `❓`, `🔰`, `🚀`, `🏆`, `🚛`, `💻`, `⚠️`, `🌍`) + `<b>Заголовок на русском</b>`.
-   - Put the direct source link on ONE natural keyword inside the body text (e.g. `<a href="EXACT_CANDIDATE_URL">ключевое слово</a>`) using the EXACT `url` of THAT SAME `idx` candidate.
-   - End EVERY caption with exactly this one line:
-👉 <a href="https://t.me/qaraqalpaqshajanaliqlar">@qaraqalpaqshajanaliqlar — aǵza bolıw</a>
+2. Write each caption in fluent, crystal-clear, factual RUSSIAN following the exact 2-paragraph hook structure above (it will be translated into 100% pure Karakalpak Latin via our dedicated neural translation API).
 
 STRICT CONTENT BAN:
 - NEVER select or write about rape, sexual violence, sexual assault, pedophilia, or sexual crimes! (Military wars, armed conflicts, and accidents are allowed, but ALL sexual violence/rape is STRICTLY FORBIDDEN).
@@ -1593,7 +1612,8 @@ INSTRUCTIONS FOR EACH ITEM:
 3. "clean_caption_html":
    Apply all corrections from your linguistic audit to the text.
    - PRESERVE all HTML formatting tags (<b>, <i>, <blockquote>, <a href="...">) intact!
-   - PRESERVE exact numbers, dates, names, and links intact!
+   - PRESERVE exact numbers, dates, names, quotes «...», and embedded links intact!
+   - PRESERVE the EXACT 2-paragraph narrative layout (\n\n between Headline, Paragraph 1, Paragraph 2, and Footer). NEVER collapse the paragraphs into a single text block!
    - PRESERVE the closing link intact: 👉 <a href="https://t.me/qaraqalpaqshajanaliqlar">@qaraqalpaqshajanaliqlar — aǵza bolıw</a>
 
 INPUT ITEMS:
@@ -1770,10 +1790,16 @@ def format_caption_with_direct_source_link(caption: str, exact_url: str, source_
 
     caption = caption.strip()
 
+    # Strip any bullet markers at line starts
+    caption = re.sub(r'(?m)^[\s]*[🔹▪️➖•–—]\s*', '', caption)
+
     # Strip any redundant Derek/Tolıq maǵlıwmat lines
     caption = re.sub(r'(?i)\n*Tolıq\s+maǵlıwmat(?:lar)?(?:\s+(?:ushın|bul jerde))?[.:]?', '', caption)
     caption = re.sub(r'(?i)\n*🔗\s*(?:Derek|Tolıq maǵlıwmat)[^\n]*', '', caption)
     caption = re.sub(r'(?i)\n*Derek\s*:[^\n]*', '', caption)
+
+    # Ensure clean \n\n after </b> headline
+    caption = re.sub(r'(</b>)\s*\n(?!\n)', r'\1\n\n', caption)
 
     soup = BeautifulSoup(caption, "html.parser")
     
@@ -1810,8 +1836,14 @@ def format_caption_with_direct_source_link(caption: str, exact_url: str, source_
                 caption = caption[:sentence_verb_match.start(1)] + f'<a href="{exact_url}">{verb}</a>' + caption[sentence_verb_match.end(1):]
                 wrapped_body = True
 
-    if "@qaraqalpaqshajanaliqlar" not in caption:
-        caption = caption.rstrip() + '\n👉 <a href="https://t.me/qaraqalpaqshajanaliqlar">@qaraqalpaqshajanaliqlar — aǵza bolıw</a>'
+    # Strip existing footer before appending standardized double-newline footer
+    footer = '👉 <a href="https://t.me/qaraqalpaqshajanaliqlar">@qaraqalpaqshajanaliqlar — aǵza bolıw</a>'
+    if "@qaraqalpaqshajanaliqlar" in caption:
+        caption = re.sub(r'\n*👉\s*<a\s+href="https://t\.me/qaraqalpaqshajanaliqlar"[^>]*>.*?</a>', '', caption)
+    caption = caption.rstrip() + '\n\n' + footer
+
+    # Normalize excessive newlines (max 2)
+    caption = re.sub(r'\n{3,}', '\n\n', caption)
 
     return caption.strip()
 
@@ -1849,7 +1881,7 @@ def audit_and_enforce_karakalpak_quality(caption: str, cand: dict[str, Any]) -> 
 
     # 6. Signature assurance
     if "@qaraqalpaqshajanaliqlar" not in caption:
-        caption = caption.rstrip() + '\n👉 <a href="https://t.me/qaraqalpaqshajanaliqlar">@qaraqalpaqshajanaliqlar — aǵza bolıw</a>'
+        caption = caption.rstrip() + '\n\n👉 <a href="https://t.me/qaraqalpaqshajanaliqlar">@qaraqalpaqshajanaliqlar — aǵza bolıw</a>'
 
     # 7. Length and alphabet validation
     visible_text = BeautifulSoup(caption, "html.parser").get_text()
