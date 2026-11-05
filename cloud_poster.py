@@ -1673,6 +1673,66 @@ FORBIDDEN_ROOTS_CHECK = [
     (r"\bJarahat(lan|qa|tıń|tı|ta|lar)?\b", r"Jaraqat\1"),
 ]
 
+def format_caption_with_direct_source_link(caption: str, exact_url: str, source_name: str = "") -> str:
+    """Enforces that the exact direct source link is prominently placed on the focus keyword and at the end."""
+    if not exact_url:
+        return caption
+
+    caption = caption.strip()
+    soup = BeautifulSoup(caption, "html.parser")
+    
+    # Check if external link already exists in body
+    has_external_link = False
+    for a in soup.find_all("a"):
+        href = a.get("href", "")
+        if "qaraqalpaqshajanaliqlar" not in href:
+            a["href"] = exact_url
+            has_external_link = True
+            break
+            
+    if has_external_link:
+        caption = str(soup)
+    else:
+        focus_verbs = [
+            r"\b(juwmaqlaw múddetlerin|málim etti|málim qılındı|málimleme berdi|xabar berildi|xabar berilmekte|xabarladı|eskertti|kútilmekte|engiziledi|tastıyıqlandı|belgilendi|aytıp ótti|dáwirinde|sheshimi qabıllandı)\b"
+        ]
+        wrapped_body = False
+        for pat in focus_verbs:
+            m = re.search(pat, caption, flags=re.IGNORECASE)
+            if m:
+                target_word = m.group(1).rstrip(".,;:!?")
+                caption = caption[:m.start()] + f'<a href="{exact_url}">{target_word}</a>' + caption[m.start() + len(target_word):]
+                wrapped_body = True
+                break
+        
+        if not wrapped_body:
+            lead_match = re.search(r'(</b>\s*\n+)([^\n<]+)', caption)
+            if lead_match:
+                lead_text = lead_match.group(2).strip()
+                words = lead_text.split()
+                if len(words) >= 4:
+                    raw_chunk = " ".join(words[-3:])
+                    target_chunk = raw_chunk.rstrip(".,;:!?")
+                    start_pos = caption.find(raw_chunk, lead_match.start())
+                    if start_pos != -1:
+                        trailing = raw_chunk[len(target_chunk):]
+                        caption = caption[:start_pos] + f'<a href="{exact_url}">{target_chunk}</a>{trailing}' + caption[start_pos + len(raw_chunk):]
+                        wrapped_body = True
+
+    sig_pattern = r'(👉\s*<a\s+href="https://t\.me/qaraqalpaqshajanaliqlar">.*?</a>|@qaraqalpaqshajanaliqlar)'
+    src_label = f"Derek ({source_name.strip()})" if source_name.strip() else "Tolıq maǵlıwmat"
+    
+    if "Derek" not in caption and "Tolıq maǵlıwmat" not in caption:
+        sig_match = re.search(sig_pattern, caption)
+        if sig_match:
+            insert_idx = sig_match.start()
+            caption = caption[:insert_idx].rstrip() + f'\n\n🔗 <a href="{exact_url}">{src_label}</a>\n' + caption[insert_idx:]
+        else:
+            caption = caption.rstrip() + f'\n\n🔗 <a href="{exact_url}">{src_label}</a>\n👉 <a href="https://t.me/qaraqalpaqshajanaliqlar">@qaraqalpaqshajanaliqlar — aǵza bolıw</a>'
+
+    return caption
+
+
 def audit_and_enforce_karakalpak_quality(caption: str, cand: dict[str, Any]) -> str | None:
     """Final pre-publish inspection gate: enforces 0% error Karakalpak & exact post URL."""
     if not caption or len(caption.strip()) < 100:
@@ -1698,20 +1758,17 @@ def audit_and_enforce_karakalpak_quality(caption: str, cand: dict[str, Any]) -> 
     # 4. Escape bare ampersands for Telegram HTML
     caption = re.sub(r"&(?!(?:amp|lt|gt|quot|#\d+|#x[0-9a-fA-F]+);)", "&amp;", caption)
 
-    # 5. STRICT URL ENFORCER: Ensure source link in body points directly to EXACT candidate post URL
+    # 5. STRICT URL & FOCUS LINK ENFORCER: Inject exact direct source link to focus keyword and footer
     exact_url = cand.get("url") or cand.get("fallback_post_url") or ""
+    source_name = cand.get("source_name") or ""
     if exact_url:
-        soup = BeautifulSoup(caption, "html.parser")
-        replaced_link = False
-        for a_tag in soup.find_all("a"):
-            href = a_tag.get("href", "")
-            if "qaraqalpaqshajanaliqlar" not in href:
-                a_tag["href"] = exact_url
-                replaced_link = True
-                break
-        caption = str(soup)
+        caption = format_caption_with_direct_source_link(caption, exact_url, source_name)
 
-    # 6. Length and alphabet validation
+    # 6. Signature assurance
+    if "@qaraqalpaqshajanaliqlar" not in caption:
+        caption = caption.rstrip() + '\n👉 <a href="https://t.me/qaraqalpaqshajanaliqlar">@qaraqalpaqshajanaliqlar — aǵza bolıw</a>'
+
+    # 7. Length and alphabet validation
     visible_text = BeautifulSoup(caption, "html.parser").get_text()
     if len(visible_text) > 1015 or len(visible_text) < 120:
         print(f"[AUDIT] Visible caption length out of bounds ({len(visible_text)} chars)")
@@ -1720,10 +1777,6 @@ def audit_and_enforce_karakalpak_quality(caption: str, cand: dict[str, Any]) -> 
     if CYRILLIC_RE.search(visible_text):
         print(f"[AUDIT] Unmapped Cyrillic still present, rejecting: {CYRILLIC_RE.findall(visible_text)}")
         return None
-
-    # 7. Signature assurance
-    if "@qaraqalpaqshajanaliqlar" not in caption:
-        caption = caption.rstrip() + '\n👉 <a href="https://t.me/qaraqalpaqshajanaliqlar">@qaraqalpaqshajanaliqlar — aǵza bolıw</a>'
 
     return caption
 
