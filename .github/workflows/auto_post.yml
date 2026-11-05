@@ -1,12 +1,12 @@
-name: "@qaraqalpaqshajanaliqlar Auto News Poster (Every 15 min / 4x per hour)"
+name: "@qaraqalpaqshajanaliqlar Auto News Poster (Every 10 min / 6x per hour)"
 
 on:
   schedule:
-    # Runs 4 TIMES EVERY HOUR (every 15 minutes: :07, :22, :37, :52)
-    # Off-peak minutes avoid GitHub Actions global queue drops & delays
+    # Runs 6 TIMES EVERY HOUR (strictly every 10 minutes: :02, :12, :22, :32, :42, :52)
+    # 10-minute cadence keeps Render translation API warm 24/7 (never sleeps!)
     # Between 04:00 and 00:00 Tashkent time (UTC+5)
-    # 23:07..23:52 UTC = 04:07..04:52 UZT | 00:07..19:52 UTC = 05:07..00:52 UZT
-    - cron: "7,22,37,52 0-19,23 * * *"
+    # 23:02..23:52 UTC = 04:02..04:52 UZT | 00:02..19:52 UTC = 05:02..00:52 UZT
+    - cron: "2,12,22,32,42,52 0-19,23 * * *"
   workflow_dispatch:
     inputs:
       max_posts:
