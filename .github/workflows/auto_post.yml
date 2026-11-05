@@ -16,6 +16,7 @@ on:
 
 permissions:
   contents: read
+  actions: write
 
 concurrency:
   group: qrjanaliq-poster
@@ -24,9 +25,12 @@ concurrency:
 jobs:
   publish-news:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
 
     steps:
+      - name: Record start time
+        run: echo "START_TS=$(date +%s)" >> $GITHUB_ENV
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -54,3 +58,15 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           MAX_POSTS: ${{ github.event.inputs.max_posts || '1' }}
         run: python cloud_poster.py
+
+      # GitHub cron is best-effort and often skips runs. Self-chain: wait until
+      # 10 minutes after this run started, then dispatch the next run.
+      - name: Chain next run in 10 minutes
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ELAPSED=$(( $(date +%s) - START_TS ))
+          WAIT=$(( 600 - ELAPSED ))
+          if [ $WAIT -gt 0 ]; then sleep $WAIT; fi
+          gh workflow run auto_post.yml --ref main --repo ${{ github.repository }}
