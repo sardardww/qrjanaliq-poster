@@ -161,24 +161,23 @@ CYR_TO_QQ_LATIN = {
 }
 
 AUTO_WORD_FIXES = [
-    # Quotes and apostrophes to acute
+    # 1. Official 2016 Acute Vowels & Consonants (Strict normalization from typewriter apostrophes)
     (r"G['’ʻʼ]", "Ǵ"),
     (r"g['’ʻʼ]", "ǵ"),
     (r"O['’ʻʼ]", "Ó"),
     (r"o['’ʻʼ]", "ó"),
-    
-    # Official Country & City Names
-    (r"\bShveysariya", "Shveycariya"),
-    (r"\bshveysariya", "shveycariya"),
-    (r"\bShveyariya", "Shveycariya"),
-    (r"\bAfǵanstan\b", "Awǵanstan"),
-    (r"\bafǵanstan\b", "awǵanstan"),
-    (r"\bFárǵona\b", "Ferǵana"),
-    (r"\bfárǵona\b", "ferǵana"),
-    (r"\bMuxtar elshi\b", "Tolıq huqıqlı elshi"),
-    (r"\bmuxtar elshi\b", "tolıq huqıqlı elshi"),
-    
-    # Letter C (ц) in international loanwords
+    (r"N['’ʻʼ]", "Ń"),
+    (r"n['’ʻʼ]", "ń"),
+
+    # 2. Turkish/foreign letters sometimes output by OCR/translators
+    (r"Ş", "Sh"), (r"ş", "sh"),
+    (r"Ç", "Ch"), (r"ç", "ch"),
+    (r"Ğ", "Ǵ"), (r"ğ", "ǵ"),
+    (r"Ö", "Ó"), (r"ö", "ó"),
+    (r"Ü", "Ú"), (r"ü", "ú"),
+    (r"İ", "I"), (r"ı", "ı"),
+
+    # 3. 2016 Standard Latin: 'c' in international loanwords (replaces obsolete 'ts')
     (r"\bepitsentr", "epicentr"),
     (r"\bEpitsentr", "Epicentr"),
     (r"\bpolitsiya\b", "policiya"),
@@ -205,244 +204,114 @@ AUTO_WORD_FIXES = [
     (r"\bVaksina\b", "Vakcina"),
     (r"\bfederatsiya\b", "federaciya"),
     (r"\bFederatsiya\b", "Federaciya"),
-    (r"\baviatssiya\b", "aviaciya"),
-    (r"\bAviatsiya\b", "Aviaciya"),
     (r"\baviatsiya\b", "aviaciya"),
-
-    # Suffixes: Kazakh -ti/-tı -> Karakalpak -li/-lı in adjectives
-    (r"\bq[aá]wipti\b", "qáwipli"),
-    (r"\bQ[aá]wipti\b", "Qáwipli"),
-    (r"\bquwattı\b", "quwatlı"),
-    (r"\bQuwattı\b", "Quwatlı"),
-    (r"\btájiriybeti\b", "tájiriybeli"),
-    (r"\bTájiriybeti\b", "Tájiriybeli"),
-
-    # Kazakh Roots strictly replaced
-    (r"\bjobalar\b", "joybarlar"),
-    (r"\bJobalar\b", "Joybarlar"),
-    (r"\bjobası\b", "joybarı"),
-    (r"\bJobası\b", "Joybarı"),
-    (r"\bjoba\b", "joybar"),
-    (r"\bJoba\b", "Joybar"),
-    (r"\bbaǵıtlanǵan\b", "baǵdarlanǵan"),
-    (r"\bBaǵıtlanǵan\b", "Baǵdarlanǵan"),
-    (r"\bbaǵıttalǵan\b", "baǵdarlanǵan"),
-    (r"\bBaǵıttalǵan\b", "Baǵdarlanǵan"),
-    (r"\borın aldı\b", "júz berdi"),
-    (r"\bOrın aldı\b", "Júz berdi"),
-    (r"\bmúmkindik\b", "múmkinshilik"),
-    (r"\bMúmkindik\b", "Múmkinshilik"),
-    (r"\barıza\b", "arza"),
-    (r"\bArıza\b", "Arza"),
-    (r"\bjıynalıs\b", "májilis"),
-    (r"\bJıynalıs\b", "Májilis"),
-    (r"\bteledidar\b", "televizor"),
-    (r"\bTeledidar\b", "Televizor"),
-    (r"\búkimat\b", "húkimet"),
-    (r"\bÚkimat\b", "Húkimet"),
-    (r"\biskerligin\b", "jumısın"),
-    (r"\bIskerligin\b", "Jumısın"),
-    (r"\biskerligi\b", "jumısı"),
-    (r"\bIskerligi\b", "Jumısı"),
-    (r"\biskerlik\b", "jumıs"),
-    (r"\bqarjılay\b", "finanslıq"),
-    (r"\bQarjılay\b", "Finanslıq"),
-    (r"\bjedel izertlew\b", "jedel-qıdırıw"),
-    (r"\bJedel izertlew\b", "Jedel-qıdırıw"),
-
-    # Uzbekisms strictly replaced
-    (r"\bshirinlikler\b", "shıyrinlikler"),
-    (r"\bShirinlikler\b", "Shıyrinlikler"),
-    (r"\bshirinlik\b", "shıyrinlik"),
-    (r"\bShirinlik\b", "Shıyrinlik"),
-    (r"\btalonshılıq\b", "basqınshılıq"),
-    (r"\bTalonshılıq\b", "Basqınshılıq"),
-    (r"\bdeportaciya qılıw\b", "deportaciya etiw"),
-    (r"\bDeportaciya qılıw\b", "Deportaciya etiw"),
-    (r"\bsayaxat qılıw\b", "sayaxat etiw"),
-    (r"\bSayaxat qılıw\b", "Sayaxat etiw"),
-    (r"\bmayda bezorılıq\b", "mayda bizarılıq"),
-    (r"\bMayda bezorılıq\b", "Mayda bizarılıq"),
-    (r"\bbezorılıq\b", "bizarılıq"),
-    (r"\bjamoat tártibin\b", "jámiyetlik tártipti"),
-    (r"\bjamoat\b", "jámiyetlik"),
-    (r"\bJamoat\b", "Jámiyetlik"),
-    (r"\bkamsıtıwshı\b", "kemsitiwshi"),
-    (r"\bramzlardı\b", "belgilerdi"),
-    (r"\bramzları\b", "belgileri"),
-    (r"\bavto[- ]gaz\b", "avtogaz"),
-    (r"\bAvto[- ]gaz\b", "Avtogaz"),
-    (r"\bturmıs gaz\b", "turmıslıq gaz"),
-    (r"\bTurmıs gaz\b", "Turmıslıq gaz"),
-    (r"\bzilzila\b", "jer silkiniwi"),
-    (r"\bZilzila\b", "Jer silkiniwi"),
-    (r"\bsayyora\b", "planeta"),
-    (r"\bSayyora\b", "Planeta"),
-    (r"\bjánivor\b", "janzat"),
-    (r"\bjonivor\b", "janzat"),
-    (r"\btezyurar\b", "tez júrer"),
-    (r"\bulkan\b", "úlken"),
-    (r"\biqtidarlı\b", "uqıplı"),
-    (r"\bmoslasqan\b", "maslasqan"),
-    (r"\bommalastırıw\b", "ǵalabalastırıw"),
-    (r"\btaqdimatı\b", "tanıstırıw máresimi"),
-    (r"\bsóxbat\b", "sáwbetlesiw"),
-    (r"\btunda\b", "túnde"),
-    (r"\bulanbaǵan\b", "jalǵanbaǵan"),
-    (r"\bulanǵan\b", "jalǵanǵan"),
-    (r"\bso'm\b", "sum"),
-    (r"\bsoʻm\b", "sum"),
-    (r"\btuman\b", "rayon"),
-    (r"\bviloyat\b", "wálayat"),
-    (r"\bxodim\b", "xızmetker"),
-    (r"\bxizmati\b", "xızmeti"),
-    (r"\bo'rinbosari\b", "orınbasarı"),
-    (r"\btadbir\b", "ilaj"),
-    (r"\btadbirlar\b", "ilajlar"),
-    (r"\bchora-tadbirlar\b", "ilajlar"),
-    (r"\bchunki\b", "sebebi"),
-    (r"\bChunki\b", "Sebebi"),
-    (r"\buchun\b", "ushın"),
-    (r"\bUchun\b", "Ushın"),
-    (r"\bbilan\b", "menen"),
-    (r"\bBilan\b", "Menen"),
-    (r"\blekin\b", "biraq"),
-    (r"\bLekin\b", "Biraq"),
-    (r"\bammo\b", "biraq"),
-    (r"\bAmmo\b", "Biraq"),
-    (r"\bfaqat\b", "tek"),
-    (r"\bFaqat\b", "Tek"),
-    (r"\bjuda\b", "júdá"),
-    (r"\bJuda\b", "Júdá"),
-    (r"\bbo'yicha\b", "boyınsha"),
-    (r"\bboʻyicha\b", "boyınsha"),
-    (r"\bhaqida\b", "haqqında"),
-    (r"\bto'g'risida\b", "tuwralı"),
-    (r"\bmuhim\b", "áhmiyetli"),
-    (r"\bMuhim\b", "Áhmiyetli"),
-    (r"\bmámuriy\b", "hákimshilik"),
-    (r"\bMámuriy\b", "Hákimshilik"),
-
-    # Typos, Uzbekisms & Missing Letter Fixes
-    (r"\bsıyıqshı", "sıyqırshı"),
-    (r"\bSıyıqshı", "Sıyqırshı"),
-    (r"\bTexnogeniyalıq\b", "Texnogen"),
-    (r"\btexnogeniyalıq\b", "texnogen"),
-    (r"\bjarahat(lan|qa|tıń|tı|ta|lar)?\b", r"jaraqat\1"),
-    (r"\bJarahat(lan|qa|tıń|tı|ta|lar)?\b", r"Jaraqat\1"),
-    (r"\bjáriymaǵa tartıw\b", "járiyma salıw"),
-    (r"\bjáriymaǵa tartıldı\b", "járiyma salındı"),
-    (r"\bjol háreketi qadınların\b", "jol háreketi qaǵıydaların"),
-    (r"\bulanbaǵan\b", "jalǵanbaǵan"),
-    (r"\bGazlespegen\b", "Gazlastırılmaǵan"),
-    (r"\bgazlespegen\b", "gazlastırılmaǵan"),
-    (r"\bNókis qalalarındaǵı\b", "Nókis qalasındaǵı"),
-    (r"\bislep shıqıldı\b", "islep shıǵıldı"),
-    (r"\bJIÓdegiy\b", "JIÓdegi"),
-    (r"\bJIÓ[- ]daǵı\b", "JIÓ-degi"),
-    (r"\bJIÓ[- ]dagi\b", "JIÓ-degi"),
-    (r"\bmoslasqan\b", "maslasqan"),
-    (r"\biqtidarlı\b", "uqıplı"),
-    (r"\bulkan\b", "úlken"),
-    (r"\btezyurar\b", "tez júrer"),
-    (r"\bTezyurar\b", "Tez júrer"),
-    (r"\bzilzila\b", "jer silkiniwi"),
-    (r"\bZilzila\b", "Jer silkiniwi"),
-    (r"\bjánivor\b", "janzat"),
-    (r"\bjonivor\b", "janzat"),
-    (r"\bchuvalchangsimon\b", "qurt tárizli"),
-    (r"\bsayyora\b", "planeta"),
-    (r"\bavto[- ]gaz\b", "avtogaz"),
-    (r"\bAvto[- ]gaz\b", "Avtogaz"),
-    (r"\bturmıs gaz\b", "turmıslıq gaz"),
-    (r"\bTurmıs gaz\b", "Turmıslıq gaz"),
-    (r"\berkinen ayır", "azatlıǵınan ayır"),
-    (r"\bErkinen ayır", "Azatlıǵınan ayır"),
-    (r"\bÁlot\b", "Alat"),
-    (r"\b(m|M)ínnetleme", r"\1innetleme"),
-    (r"\b(ó|Ó)tkez(di|ildi|iw|e|gen|ken)", r"\1tker\2"),
-    (r"\b(t|T)ıs (shetka|shótke|qawat|tas|sal|dári|emle|doktor|tazala|kórik)", r"\1is \2"),
-    (r"\bpriceplar\b", "tirkemeler"),
-    (r"\bPriceplar\b", "Tirkemeler"),
-    (r"\bpricep\b", "tirkeme"),
-    (r"\bPricep\b", "Tirkeme"),
-    (r"\bbajarmasa\b", "orınlamasa"),
-    (r"\bBajarmasa\b", "Orınlamasa"),
-    (r"\bbajarıw\b", "orınlaw"),
-    (r"\bBajarıw\b", "Orınlaw"),
-    (r"\bbajardı\b", "orınladı"),
-    (r"\bBajardı\b", "Orınladı"),
-    (r"qaytarıw menen eskertti", "qaytarıwı múmkinligin eskertti"),
-    (r"qızıl iyegin keltirip", "qızıl iyek keselliklerin keltirip"),
-    (r"joq etedi hám awız quwıslıǵı qáwipsizligin támiyinledi", "joq etedi hám awız quwıslıǵı qáwipsizligin támiyinleydi"),
-    (r"\bvoyevodalığında\b", "voyevodalıǵında"),
+    (r"\bAviatsiya\b", "Aviaciya"),
+    (r"\bsotsiallıq\b", "sociallıq"),
+    (r"\bSotsiallıq\b", "Sociallıq"),
+    (r"\bShveysariya\b", "Shveycariya"),
+    (r"\bshveysariya\b", "shveycariya"),
+    (r"\bSavitskiy\b", "Savickiy"),
     (r"\bYunçjou\b", "Yunchjou"),
-    (r"\btanaffus(tan|qa|tıń|tı|ta)?\b", r"tánepis\1"),
-    (r"\bTanaffus(tan|qa|tıń|tı|ta)?\b", r"Tánepis\1"),
-    (r"\btámiyinlemek\b", "támiyinlew"),
-    (r"\bnazariy\b", "teoriyalıq"),
-    (r"\bNazariy\b", "Teoriyalıq"),
-    (r"\bmiynet qılıp\b", "miynet etip"),
-    (r"\bhákimlik iskerligin\b", "tóreshilik jumısın"),
-    (r"\bFutbol hákimleri\b", "Futbol tóreshileri"),
-    (r"\bmaqsadında\b", "maqsetinde"),
-    (r"\bkunda\b", "kúnde"),
-    (r"\btunda\b", "túnde"),
-    (r"\bjúze keletin\b", "júzege keletin"),
-    (r"\bshubalshań\b", "shuwalshań"),
+
+    # 4. Standard 2016 Karakalpak Orthography & Spelling normalizations
+    (r"\bbuzyw\b", "buzıw"),
+    (r"\bBuzyw\b", "Buzıw"),
+    (r"\bshirinlikler\b", "shiyrinlikler"),
+    (r"\bShirinlikler\b", "Shiyrinlikler"),
+    (r"\bshirinlik\b", "shiyrinlik"),
+    (r"\bShirinlik\b", "Shiyrinlik"),
     (r"\bshıyrinlikler\b", "shiyrinlikler"),
     (r"\bshıyrinlik\b", "shiyrinlik"),
-    (r"\bShıyrinlik\b", "Shiyrinlik"),
-    (r"\b(m|M)ádeniyat saroyı", r"\1ádeniyat sarayı"),
+    (r"\bpuqara\b", "puqara"),
+    (r"\bpuxara\b", "puqara"),
+    (r"\bPuxara\b", "Puqara"),
+    (r"\bpuxaralar\b", "puqaralar"),
+    (r"\bPuxaralar\b", "Puqaralar"),
+    (r"\bseksewil\b", "seksewil"),
+    (r"\bsaqsewil\b", "seksewil"),
+    (r"\bSaqsewil\b", "Seksewil"),
+    (r"\bturaq jay\b", "turaq jay"),
+    (r"\bturar jay\b", "turaq jay"),
+    (r"\bTurar jay\b", "Turaq jay"),
+    (r"\bnarkodúkon\b", "narkodúkan"),
+    (r"\bsıyqırshı\b", "sıyqırshı"),
+    (r"\bsıyıqshı\b", "sıyqırshı"),
+    (r"\bSıyıqshı\b", "Sıyqırshı"),
+    (r"\buzunlıǵı\b", "uzınlıǵı"),
+    (r"\bUzunlıǵı\b", "Uzınlıǵı"),
+    (r"\bAfǵanstan\b", "Awǵanstan"),
+    (r"\bafǵanstan\b", "awǵanstan"),
+    (r"\bFárǵona\b", "Ferǵana"),
+    (r"\bfárǵona\b", "ferǵana"),
+    (r"\bÁlot\b", "Alat"),
+    (r"\b(m|M)ínnetleme\b", r"\1innetleme"),
+    (r"\bpricep\b", "tirkeme"),
+    (r"\bPricep\b", "Tirkeme"),
+    (r"\bpriceplar\b", "tirkemeler"),
+    (r"\bPriceplar\b", "Tirkemeler"),
+    (r"\btanaffus\b", "tánepis"),
+    (r"\bTanaffus\b", "Tánepis"),
+    (r"\btexnogeniyalıq\b", "texnogen"),
+    (r"\bTexnogeniyalıq\b", "Texnogen"),
+
+    # 5. Strict Uzbekisms & Kazakhisms (Unambiguous words that are NEVER Karakalpak)
+    (r"\bmayda bezorılıq\b", "mayda buzaqılıq"),
+    (r"\bMayda bezorılıq\b", "Mayda buzaqılıq"),
+    (r"\bkishi buzaqılıq\b", "mayda buzaqılıq"),
+    (r"\bKishi buzaqılıq\b", "Mayda buzaqılıq"),
+    (r"\bkishi xuliganlıq\b", "mayda buzaqılıq"),
+    (r"\búsaq xuliganlıq\b", "mayda buzaqılıq"),
+    (r"\bbezorılıq\b", "buzaqılıq"),
+    (r"\bBezorılıq\b", "Buzaqılıq"),
+    (r"\bjamoat tártibin\b", "jámiyetlik tártipti"),
+    (r"\bJamoat tártibin\b", "Jámiyetlik tártipti"),
+    (r"\bjamoat\b", "jámiyetlik"),
+    (r"\bJamoat\b", "Jámiyetlik"),
+    (r"\b(m|M)ádeniyat saroyı\b", r"\1ádeniyat sarayı"),
     (r"\b(s|S)aroyında\b", r"\1arayında"),
     (r"\b(s|S)aroyda\b", r"\1arayda"),
     (r"\b(s|S)aroyǵa\b", r"\1arayǵa"),
     (r"\b(s|S)aroydıń\b", r"\1araydıń"),
+    (r"\b(s|S)aroy\b", r"\1aray"),
+    (r"\bmilliy saylandı komanda\b", "terme komanda"),
+    (r"\bMilliy saylandı komanda\b", "Terme komanda"),
+    (r"\bsaylandı komanda\b", "terme komanda"),
+    (r"\bSaylandı komanda\b", "Terme komanda"),
+    (r"\btalonshılıq\b", "basqınshılıq"),
+    (r"\bTalonshılıq\b", "Basqınshılıq"),
+    (r"\bchunki\b", "sebebi"),
+    (r"\bChunki\b", "Sebebi"),
+    (r"\bammo\b", "biraq"),
+    (r"\bAmmo\b", "Biraq"),
+    (r"\blekin\b", "biraq"),
+    (r"\bLekin\b", "Biraq"),
+    (r"\btuman\b", "rayon"),
+    (r"\bTuman\b", "Rayon"),
+    (r"\bviloyat\b", "wálayat"),
+    (r"\bViloyat\b", "Wálayat"),
+    (r"\bxodim\b", "xızmetker"),
+    (r"\bXodim\b", "Xızmetker"),
+    (r"\bo'rinbosari\b", "orınbasarı"),
+    (r"\bto'g'risida\b", "tuwralı"),
+    (r"\bhaqida\b", "haqqında"),
+    (r"\bbo'yicha\b", "boyınsha"),
+    (r"\bboʻyicha\b", "boyınsha"),
     (r"\bkambaǵal\b", "kámbaǵal"),
     (r"\bKambaǵal\b", "Kámbaǵal"),
-    (r"\bOlmazor\b", "Almazar"),
-    (r"\bqádelerin mensemey\b", "qaǵıydaların mensemey"),
-    (r"\bturar jay\b", "turaq jay"),
-    (r"\bTurar jay\b", "Turaq jay"),
-    (r"\bnarkodúkon\b", "narkodúkan"),
-    (r"\bsaqsewil\b", "seksewil"),
-    (r"\bSavitskiy\b", "Savickiy"),
-    (r"\bpuxara(lar|nıń|ǵa|da|dan|sı)?\b", r"puqara\1"),
-    (r"\bPuxara(lar|nıń|ǵa|da|dan|sı)?\b", r"Puqara\1"),
-    (r"\buzunlıǵı\b", "uzınlıǵı"),
-    (r"\bUzunlıǵı\b", "Uzınlıǵı"),
-    (r"\b(\d+)\s*tadan\b", r"\1-den"),
-    (r"\bsóxbat(lar|qa|tıń|ta|tan|ı)?\b", r"sáwbet\1"),
-    (r"\bSóxbat(lar|qa|tıń|ta|tan|ı)?\b", r"Sáwbet\1"),
-    (r"\bRaqabat komiteti\b", "Ráqabat komiteti"),
-    (r"\baljasıp basqa kartaǵa\b", "jańılısıp basqa kartaǵa"),
-    (r"\b24 kilometrli\b", "24 kilometrlik"),
-    (r"\bsaylandı komanda\b", "terme komanda"),
-(r"\bbuzyw\b", "buzıw"),
-    (r"\bkishi buzaqılıq\b", "mayda buzaqılıq"),
-    (r"\bkishi xuliganlıq\b", "mayda buzaqılıq"),
-    (r"\búsaq xuliganlıq\b", "mayda buzaqılıq"),
-    (r"\bsotsiallıq\b", "sociallıq"),
-    (r"\bSotsiallıq\b", "Sociallıq"),
-    (r"\bmilliy saylandı komanda\b", "terme komanda"),
-    (r"\bSaylandı komanda\b", "Terme komanda"),
-
-    # Genitive Case Suffix 'n' -> 'ń' (MANDATORY)
-    (r"\b([A-Za-zÁáÓóÚúÍıǴǵŃń]{3,})nin\b", r"\g<1>niń"),
-    (r"\b([A-Za-zÁáÓóÚúÍıǴǵŃń]{3,})nın\b", r"\g<1>nıń"),
-    (r"\b([A-Za-zÁáÓóÚúÍıǴǵŃń]{3,})din\b", r"\g<1>diń"),
-    (r"\b([A-Za-zÁáÓóÚúÍıǴǵŃń]{3,})dın\b", r"\g<1>dıń"),
-    (r"\b([A-Za-zÁáÓóÚúÍıǴǵŃń]{3,})tin\b", r"\g<1>tiń"),
-    (r"\b([A-Za-zÁáÓóÚúÍıǴǵŃń]{3,})tın\b", r"\g<1>tıń"),
+    (r"\bMuxtar elshi\b", "Tolıq huqıqlı elshi"),
+    (r"\bmuxtar elshi\b", "tolıq huqıqlı elshi"),
+    (r"\borın aldı\b", "júz berdi"),
+    (r"\bOrın aldı\b", "Júz berdi"),
+    (r"\bteledidar\b", "televizor"),
+    (r"\bTeledidar\b", "Televizor"),
+    (r"\búkimat\b", "húkimet"),
+    (r"\bÚkimat\b", "Húkimet"),
+    (r"\bjıynalıs\b", "májilis"),
+    (r"\bJıynalıs\b", "Májilis"),
+    (r"\bso'm\b", "sum"),
+    (r"\bsoʻm\b", "sum"),
 ]
 
-# PRIMARY SOURCE LIST — every entry below was live-tested on 2026-11-04 (public preview
-# works, posted within the last days). This list is the PRIMARY hunting ground, NOT a limit:
-# the pipeline also scans open-web discovery queries (OPEN_WEB_QUERIES) and Gemini is told
-# it may prefer any reliable story found there. Add/remove lines freely; dead sources are
-# skipped silently at runtime.
-# Format: (category, telegram_handle, max_age_hours)
-# ======================================================================================
 TELEGRAM_SOURCES = [
     # --- KARAKALPAKSTAN (primary: local official + media + active districts) ---
     ("karakalpakstan", "KarPressa", 24),
@@ -1422,20 +1291,39 @@ def extract_dictionary_glossary_for_text(text: str, limit: int = 50) -> str:
     return f"MANDATORY DICTIONARY & TERMINOLOGY GLOSSARY (YOU MUST USE THESE EXACT KARAKALPAK TERMS):\n{joined}"
 
 
+# ======================================================================================
+# STRICT CONTENT SAFETY FILTER: ZERO TOLERANCE FOR RAPE / SEXUAL VIOLENCE
+# ======================================================================================
+BANNED_VIOLENCE_REGEX = re.compile(
+    r"\b(изнасилован\w*|изнасиловал\w*|педофил\w*|сексуальн\w+\s+насили\w*|развратн\w+\s+действи\w*|"
+    r"zo['ʻʼ]?rlash\w*|nomusiga\s+teg\w*|pedofil\w*|jinsiy\s+zo['ʻʼ]?ravonlik\w*|"
+    r"zorlaw\w*|nomısına\s+tiy\w*|jınsıy\s+zorlaw\w*)\b",
+    re.IGNORECASE
+)
+
 KARAKALPAK_TRANSLATOR_API_URL = os.environ.get(
     "KARAKALPAK_TRANSLATOR_API_URL", 
     "https://karakalpak-translator-api.onrender.com/translate"
 )
 
 
-def translate_post_via_custom_api(text: str, retries: int = 2) -> str:
+def ensure_render_service_warm():
+    """Wakes up Render translation API so translation calls respond in under 1 second."""
+    health_url = "https://karakalpak-translator-api.onrender.com/health"
+    try:
+        req = urllib.request.Request(health_url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=45) as resp:
+            if resp.status == 200:
+                print("[WARMUP] Render Translation API is warm and ready!")
+    except Exception as e:
+        print(f"[WARMUP] Render warmup notice: {e}")
+
+
+def translate_post_via_custom_api(text: str, timeout: int = 45, retries: int = 2) -> str:
     """Translates Russian news caption into Karakalpak Latin using user's dedicated Render API."""
     if not text or not text.strip():
         return text
-    payload = {
-        "text": text,
-        "target_script": "latin"
-    }
+    payload = {"text": text, "target_script": "latin"}
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
         KARAKALPAK_TRANSLATOR_API_URL,
@@ -1444,7 +1332,7 @@ def translate_post_via_custom_api(text: str, retries: int = 2) -> str:
     )
     for attempt in range(retries + 1):
         try:
-            with urllib.request.urlopen(req, timeout=60) as resp:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
                 res = json.loads(resp.read().decode("utf-8"))
                 translated = res.get("translated_text", "")
                 if translated and len(translated.strip()) > 30:
@@ -1454,7 +1342,7 @@ def translate_post_via_custom_api(text: str, retries: int = 2) -> str:
             print(f"[TRANSLATE_API] Attempt {attempt+1} failed: {e}")
             if attempt < retries:
                 time.sleep(3)
-    print("[TRANSLATE_API] Custom API unavailable, falling back to original caption.")
+    print("[TRANSLATE_API] Render API failed after retries.")
     return text
 
 
@@ -1497,13 +1385,16 @@ YOUR TASK:
 1. Select the TOP {ask_count} completely NEW, non-duplicate, most interesting stories following the style above (mix of Karakalpakstan, Uzbekistan daily-life/legal/safety, and World/Tech).
    - Double-check against ALREADY PUBLISHED ON @qaraqalpaqshajanaliqlar: if a story is about the same event/law (e.g. 350 kVt electricity limit, 4-day parent school holiday leave, Nukus Chemistry Olympiad, Cannavaro, Asian Cup 2027, Swiss Ambassador at School #34, China Eastern Airlines), SKIP IT!
    - Strongly prefer candidates where `has_photo` is true or whose `url` is a direct web article (not `news.google.com`).
-2. Write each caption in fluent, crystal-clear, factual RUSSIAN (it will be translated into Karakalpak via our dedicated neural translation API):
+2. Write each caption in fluent, crystal-clear, factual RUSSIAN (it will be translated into 100% pure Karakalpak Latin via our dedicated neural translation API):
    - Keep visible text between 300 and 700 characters (short, concrete numbers, names, and scannable).
    - Use ONLY valid Telegram HTML tags: `<b>...</b>`, `<i>...</i>`, `<blockquote>...</blockquote>`, `<a href="...">...</a>`.
    - Lead with ONE fitting emoji (`⚡️`, `🚨`, `❓`, `🔰`, `🚀`, `🏆`, `🚛`, `💻`, `⚠️`, `🌍`) + `<b>Заголовок на русском</b>`.
    - Put the direct source link on ONE natural keyword inside the body text (e.g. `<a href="EXACT_CANDIDATE_URL">ключевое слово</a>`) using the EXACT `url` of THAT SAME `idx` candidate.
    - End EVERY caption with exactly this one line:
 👉 <a href="https://t.me/qaraqalpaqshajanaliqlar">@qaraqalpaqshajanaliqlar — aǵza bolıw</a>
+
+STRICT CONTENT BAN:
+- NEVER select or write about rape, sexual violence, sexual assault, pedophilia, or sexual crimes! (Military wars, armed conflicts, and accidents are allowed, but ALL sexual violence/rape is STRICTLY FORBIDDEN).
 
 Return ONLY a JSON array of objects with keys:
 - "candidate_idx": integer (MUST match the exact `idx` of the story you wrote about!)
@@ -1537,7 +1428,8 @@ Return ONLY a JSON array of objects with keys:
     for it in parsed:
         cap = it.get("caption_html", "")
         if cap:
-            it["caption_html"] = translate_post_via_custom_api(cap)
+            translated = translate_post_via_custom_api(cap, timeout=45, retries=2)
+            it["caption_html"] = translated
     return parsed
 
 
@@ -1772,6 +1664,9 @@ FORBIDDEN_ROOTS_CHECK = [
 def audit_and_enforce_karakalpak_quality(caption: str, cand: dict[str, Any]) -> str | None:
     """Final pre-publish inspection gate: enforces 0% error Karakalpak & exact post URL."""
     if not caption or len(caption.strip()) < 100:
+        return None
+    if BANNED_VIOLENCE_REGEX.search(caption):
+        print("[AUDIT] Post rejected: contains banned sexual violence/rape topic.")
         return None
     
     caption = caption.lstrip("\ufeff").strip()
