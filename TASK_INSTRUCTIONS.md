@@ -8,27 +8,28 @@
 
 ---
 
-## 1. Editorial Format & Structure (Journalistic Multi-Paragraph Hook Style)
+## 1. Editorial Format & Structure (Journalistic Multi-Paragraph Hook + Interactive Style)
 
-Every post MUST strictly follow the multi-paragraph journalistic narrative structure:
+Every post MUST strictly follow the multi-paragraph journalistic narrative structure with reader interaction:
 
 ```html
 {FLAG_OR_EMOJI} <b>{Hook Headline}</b>
 
 {Paragraph 1: Core news event with concrete details — exact names, ages, clubs/organizations, quotes in «...», dates, and exact statistics. Seamlessly embed the direct source link onto ONE focus action verb or keyword before the period, e.g. <a href="EXACT_URL">málim etti</a>.}
 
-{Paragraph 2: Context, history, career milestones, background facts, previous championships/records, or broader societal/human significance.}
+{Paragraph 2: Context, history, background facts, and an INTERACTIVE QUESTION addressed to the readers (e.g. «Al siz hesh bolmasa bir márte ... paydalanıp kórdińiz be?», «Qalay oylaysız, bul sheshim durıs pa?», «Al siz bul haqqında qanday pikirdesiz?»). NOTE: In tragic/fatal incidents, omit casual questions and keep respectful factual context.}
 
 👉 <a href="https://t.me/qaraqalpaqshajanaliqlar">@qaraqalpaqshajanaliqlar — aǵza bolıw</a>
 ```
 
 ### Strict Editorial Rules:
-1. **Headline Hook:** Always start with the relevant Country Flag (e.g. 🇵🇹, 🇺🇿, 🇺🇸, 🇰🇿, 🇨🇳, 🇩🇪, 🇬🇧, 🇹🇷, 🇯🇵) or topical icon (🚀, 🏆, 🧬, 💻, 🚗, ⚖️, 🚨, ⚽️). Make the headline punchy, active, and informative.
-2. **Double Newlines (`\n\n`):** Cleanly separate Headline, Paragraph 1, Paragraph 2, and Footer.
+1. **Headline Hook:** Always start with the relevant Country Flag (e.g. 🇵🇹, 🇺🇿, 🇺🇸, 🇰🇿, 🇨🇳, 🇩🇪, 🇬🇧, 🇹🇷, 🇯🇵) or topical icon (🚀, 🏆, 🧬, 💻, 🚗, ⚖️, 🚨, ⚽️, 🛍). Make the headline punchy, active, and informative.
+2. **Double Newlines (`\n\n`):** Cleanly separate Headline, Paragraph 1, Paragraph 2 (with Question), and Footer.
 3. **NO BULLET LISTS:** Strictly NEVER use bullet points (`🔹`, `▪️`, `➖`, `•`). Posts must read as high-level journalistic narratives, not dry checklists.
 4. **Single Embedded Source Link:** Wrap exactly ONE natural focus action verb or keyword in Paragraph 1 with `<a href="{exact_url}">...</a>`.
-5. **NO Redundant Trailing Source Lines:** Strictly NEVER append "Derek:", "Tolıq maǵlıwmatlar bul jerde", or "Manba:".
-6. **Character Length:** Visible text between 450 and 850 characters (fits comfortably with photo under Telegram's 1024-character caption limit).
+5. **Interactive Engagement Question:** Ask an engaging question in Paragraph 2 to drive comments and community discussion on lifestyle, tech, sports, consumer rules, and civic issues.
+6. **NO Redundant Trailing Source Lines:** Strictly NEVER append "Derek:", "Tolıq maǵlıwmatlar bul jerde", or "Manba:".
+7. **Character Length:** Visible text between 450 and 850 characters (fits comfortably with photo under Telegram's 1024-character caption limit).
 
 ---
 
