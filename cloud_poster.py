@@ -1699,9 +1699,9 @@ def format_caption_with_direct_source_link(caption: str, exact_url: str, source_
     if has_external_link:
         caption = str(soup)
     else:
-        # Wrap exactly ONE prominent focus verb / keyword in body
+        # 1. Try prominent focus verbs & announcements
         focus_verbs = [
-            r"\b(juwmaqlaw múddetlerin|málim etti|málim qılındı|málimleme berdi|xabar berildi|xabar berilmekte|xabarladı|eskertti|kútilmekte|engiziledi|engizildi|tastıyıqlandı|belgilendi|aytıp ótti|dáwirinde|sheshimi qabıllandı)\b"
+            r"\b(juwmaqlaw múddetlerin|málim etti|málim qılındı|málimleme berdi|xabar berildi|xabar berilmekte|xabarladı|eskertti|kútilmekte|engiziledi|engizildi|tastıyıqlandı|belgilendi|aytıp ótti|iske qospaqshı|iske qosıldı|payda boladı|ashıldı|shólkemlestirildi|júzege asırıldı|start berildi|jolǵa qoyıldı|imkaniyatına iye boladı|satıp alıwǵa boladı)\b"
         ]
         wrapped_body = False
         for pat in focus_verbs:
@@ -1712,19 +1712,13 @@ def format_caption_with_direct_source_link(caption: str, exact_url: str, source_
                 wrapped_body = True
                 break
         
+        # 2. If not matched, wrap the main verb of the sentence before period
         if not wrapped_body:
-            lead_match = re.search(r'(</b>\s*\n+)([^\n<]+)', caption)
-            if lead_match:
-                lead_text = lead_match.group(2).strip()
-                words = lead_text.split()
-                if len(words) >= 4:
-                    raw_chunk = " ".join(words[-2:])
-                    target_chunk = raw_chunk.rstrip(".,;:!?")
-                    start_pos = caption.find(raw_chunk, lead_match.start())
-                    if start_pos != -1:
-                        trailing = raw_chunk[len(target_chunk):]
-                        caption = caption[:start_pos] + f'<a href="{exact_url}">{target_chunk}</a>{trailing}' + caption[start_pos + len(raw_chunk):]
-                        wrapped_body = True
+            sentence_verb_match = re.search(r'([a-zA-ZáóúıǵńÁÓÚIǴŃ]{4,})(\s*\.)', caption)
+            if sentence_verb_match:
+                verb = sentence_verb_match.group(1)
+                caption = caption[:sentence_verb_match.start(1)] + f'<a href="{exact_url}">{verb}</a>' + caption[sentence_verb_match.end(1):]
+                wrapped_body = True
 
     if "@qaraqalpaqshajanaliqlar" not in caption:
         caption = caption.rstrip() + '\n👉 <a href="https://t.me/qaraqalpaqshajanaliqlar">@qaraqalpaqshajanaliqlar — aǵza bolıw</a>'
