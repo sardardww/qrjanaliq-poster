@@ -1475,27 +1475,37 @@ EDITORIAL STYLE — "interesting first" (the style of fast, curiosity-driven new
 - Mix of topics across the batch: at most ONE routine-official story per batch; at least one story that touches daily life or safety; world/science/tech stories are welcome in every batch.
 - MANDATORY SOURCE DIVERSITY: You MUST pick candidates from completely DIFFERENT sources! Diversify across Karakalpakstan district/regional channels, Uzbekistan official ministries/legal portals (lex.uz, huquqiyaxborot, gov.uz), and World/Tech outlets. NEVER pick multiple stories from the same news outlet!
 
-MANDATORY JOURNALISTIC MULTI-PARAGRAPH HOOK TEMPLATE (STRICTLY REQUIRED):
-Every single post MUST be structured as a compelling multi-paragraph journalistic story (like @quloqnews):
+MANDATORY JOURNALISTIC MULTI-PARAGRAPH HOOK & INTERACTIVE TEMPLATE (STRICTLY REQUIRED):
+Every single post MUST be structured as a compelling multi-paragraph journalistic story with an interactive reader engagement question (like @EVENT24.uz / @quloqnews):
 
-[Model Structure Example]:
+[Model Structure Example 1 — Tech/Business/Lifestyle]:
+🛍 <b>Яндекс закрывает свой маркетплейс в Узбекистане, не продержавшись и двух лет</b>
+
+С 10 ноября Market Yandex Go перестанет принимать заказы. Сервис запустился в апреле 2025 года, но компания решила сосредоточиться на Yandex Lavka и разделе «Магазины» с быстрой доставкой, <a href="EXACT_CANDIDATE_URL">сообщили</a> в пресс-службе.
+
+А вы хоть раз заказывали что-нибудь через Market Yandex Go? Или даже не знали о его существовании?
+
+👉 <a href="https://t.me/qaraqalpaqshajanaliqlar">@qaraqalpaqshajanaliqlar — aǵza bolıw</a>
+
+[Model Structure Example 2 — Sports/World/Discovery]:
 🇵🇹 <b>Криштиану Роналду объявил о завершении карьеры в сборной Португалии</b>
 
-41-летний нападающий саудовского «Аль-Насра» <a href="EXACT_CANDIDATE_URL">объявил</a> об уходе из национальной команды в Instagram, опубликовав большое видео. «Португалия навсегда останется во мне», — написал футболист. Роналду дебютировал за сборную 20 августа 2003 года в товарищеском матче против Казахстана и за 234 встречи забил 146 голов, а также отдал 45 результативных передач.
+41-летний нападающий саудовского «Аль-Насра» <a href="EXACT_CANDIDATE_URL">объявил</a> об уходе из национальной команды в Instagram, опубликовав большое видео. «Португалия навсегда останется во мне», — написал футболист. Роналду дебютировал за сборную 20 августа 2003 года в товарищеском матче против Казахстана и за 234 встречи забил 146 голов.
 
-В составе Португалии Роналду выиграл Евро-2016 и дважды стал победителем Лиги наций УЕФА — в сезонах 2018/2019 и 2024/2025.
+В составе сборной Роналду выиграл Евро-2016 и дважды Лигу наций УЕФА. Как думаете, сможет ли кто-нибудь в ближайшие десятилетия побить его рекорд?
 
 👉 <a href="https://t.me/qaraqalpaqshajanaliqlar">@qaraqalpaqshajanaliqlar — aǵza bolıw</a>
 
 CRITICAL FORMATTING INSTRUCTIONS:
 1. LEAD HEADLINE:
-   - Begin with the country flag if the story is related to a specific country (e.g. 🇵🇹, 🇺🇿, 🇺🇸, 🇰🇿, 🇨🇳, 🇷🇺, 🇩🇪, 🇬🇧, 🇹🇷, 🇫🇷, 🇯🇵) OR a single relevant topical icon (🚀, 🏆, 🧬, 💻, 🚗, ⚖️, 🚨, ⚽️).
+   - Begin with the country flag if relevant (e.g. 🇵🇹, 🇺🇿, 🇺🇸, 🇰🇿, 🇨🇳, 🇷🇺, 🇩🇪, 🇬🇧, 🇹🇷, 🇫🇷, 🇯🇵) OR a single relevant topical icon (🚀, 🏆, 🧬, 💻, 🚗, ⚖️, 🚨, ⚽️, 🛍).
    - Headline in bold: <b>Заголовок на русском</b>. Followed by a blank line (\n\n).
 2. PARAGRAPH 1 (Core News + Hook Details):
    - Rich factual storytelling with exact ages, dates, club/agency names, quotes in «...», and numbers/stats.
-   - Embed the exact direct source link ONTO ONE natural action verb or keyword before the period: e.g. <a href="EXACT_CANDIDATE_URL">объявил</a> or <a href="EXACT_CANDIDATE_URL">сообщил</a>. Followed by a blank line (\n\n).
-3. PARAGRAPH 2 (Context, History, Background & Significance):
-   - Historical context, previous tournament titles, background facts, career milestones, or societal importance. Followed by a blank line (\n\n).
+   - Embed the exact direct source link ONTO ONE natural action verb or keyword before the period: e.g. <a href="EXACT_CANDIDATE_URL">объявил</a> or <a href="EXACT_CANDIDATE_URL">сообщили</a>. Followed by a blank line (\n\n).
+3. PARAGRAPH 2 (Context + INTERACTIVE ENGAGEMENT QUESTION):
+   - Background context or significance, followed by an INTERACTIVE QUESTION addressed to the reader (e.g. «А вы хоть раз пользовались...?», «Как думаете, справедливое ли это решение?», «А что вы думаете по этому поводу?»). This drives comments and community discussion!
+   - EXCEPTION FOR TRAGEDIES: If the story is about a deadly disaster, fatal crash, or death, DO NOT ask casual interactive questions! Keep it strictly respectful and factual.
 4. STRICT: ZERO BULLET POINTS! Absolutely NEVER use bullet lists (🔹, ▪️, ➖, •, etc.)! Everything must be fluent, engaging narrative prose.
 5. STRICT: NO SEPARATE SOURCE LINE! NEVER add "Источник:", "Derek:", or "Подробнее:". The link is embedded in the narrative.
 6. CLOSING FOOTER:
