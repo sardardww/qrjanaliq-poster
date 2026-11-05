@@ -244,7 +244,7 @@ AUTO_WORD_FIXES = [
     (r"\bafǵanstan\b", "awǵanstan"),
     (r"\bFárǵona\b", "Ferǵana"),
     (r"\bfárǵona\b", "ferǵana"),
-    (r"\bÁlot\b", "Alat"),
+    (r"\bAlat\b", "Álot"),
     (r"\b(m|M)ínnetleme\b", r"\1innetleme"),
     (r"\bpricep\b", "tirkeme"),
     (r"\bPricep\b", "Tirkeme"),
@@ -256,6 +256,12 @@ AUTO_WORD_FIXES = [
     (r"\bTexnogeniyalıq\b", "Texnogen"),
 
     # 5. Strict Uzbekisms & Kazakhisms (Unambiguous words that are NEVER Karakalpak)
+        (r"\bjasand([ıi])\b", "jasama"),
+    (r"\bJasand([ıi])\b", "Jasama"),
+    (r"\bjasandıq\b", "jasamalıq"),
+    (r"\bJasandıq\b", "Jasamalıq"),
+    (r"\bjasalma\b", "jasama"),
+    (r"\bJasalma\b", "Jasama"),
     (r"\bmayda bezorılıq\b", "mayda buzaqılıq"),
     (r"\bMayda bezorılıq\b", "Mayda buzaqılıq"),
     (r"\bkishi buzaqılıq\b", "mayda buzaqılıq"),
@@ -1385,10 +1391,11 @@ def ensure_render_service_warm(max_wait_seconds: int = 60) -> bool:
     return False
 
 
-def translate_post_via_custom_api(text: str, timeout: int = 45, retries: int = 2) -> str:
-    """Translates Russian news caption into Karakalpak Latin using user's dedicated Render API."""
+def translate_post_via_custom_api(text: str, timeout: int = 45, retries: int = 2) -> str | None:
+    """Translates Russian news caption into Karakalpak Latin using user's dedicated Render API.
+    STRICT POLICY: If Tilmoch translation fails, return None so the post is SKIPPED without arbitrary posting."""
     if not text or not text.strip():
-        return text
+        return None
     payload = {"text": text, "target_script": "latin", "model": "gemini-3.1-flash-lite"}
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
@@ -1402,14 +1409,14 @@ def translate_post_via_custom_api(text: str, timeout: int = 45, retries: int = 2
                 res = json.loads(resp.read().decode("utf-8"))
                 translated = res.get("translated_text", "")
                 if translated and len(translated.strip()) > 30:
-                    print(f"[TRANSLATE_API] Successfully translated caption ({len(translated)} chars)")
+                    print(f"[TRANSLATE_API] Successfully translated caption via Tilmoch ({len(translated)} chars)")
                     return translated
         except Exception as e:
             print(f"[TRANSLATE_API] Attempt {attempt+1} failed: {e}")
             if attempt < retries:
                 time.sleep(3)
-    print("[TRANSLATE_API] Render API failed after retries.")
-    return text
+    print("[TRANSLATE_API] Tilmoch API failed after retries. STRICT USER DIRECTIVE: Post will be SKIPPED, no arbitrary posting.")
+    return None
 
 
 def curate_and_write_posts(
@@ -1514,12 +1521,18 @@ Return ONLY a JSON array of objects with keys:
             parsed = [parsed]
 
     print(f"[TRANSLATOR] Translating {len(parsed)} curated posts into Karakalpak via {KARAKALPAK_TRANSLATOR_API_URL}...")
+    valid_items = []
     for it in parsed:
         cap = it.get("caption_html", "")
         if cap:
             translated = translate_post_via_custom_api(cap, timeout=45, retries=2)
+            if not translated:
+                print(f"[SKIP] Post idx #{it.get('candidate_idx')} SKIPPED because Tilmoch translation failed.")
+                continue
             it["caption_html"] = translated
-    return parsed
+            it["tilmoch_verified"] = True
+            valid_items.append(it)
+    return valid_items
 
 
 def scan_suspicious_words(caption_html: str) -> list[str]:
@@ -2041,6 +2054,8 @@ def main() -> int:
     bot_token, chat_id, gemini_key, max_posts = load_config()
     client = genai.Client(api_key=gemini_key)
 
+    ensure_render_service_warm(max_wait_seconds=45)
+
     print("[1/5] Checking @qaraqalpaqshajanaliqlar live feed for deduplication...")
     existing_posts, seen_urls = fetch_existing_channel_posts()
     print(f"      Found {len(existing_posts)} recent channel posts & {len(seen_urls)} seen URLs.")
@@ -2082,6 +2097,10 @@ def main() -> int:
     print("[4/5] Proofreading captions & checking semantic duplicates against Official 34-Letter Alphabet...")
     selected = proofread_karakalpak_captions(client, selected, existing_posts)
 
+    if not selected:
+        print("[SKIP ALL] No posts available from Tilmoch translator. Skipping run cleanly as instructed by user.")
+        return 0
+
     # Prioritize items matching our target category
     def item_pref_key(it: dict[str, Any]) -> int:
         cand_temp = resolve_candidate_for_item(it, candidates)
@@ -2103,6 +2122,9 @@ def main() -> int:
     for item in selected:
         if published_count >= max_posts:
             break
+        if not item.get("tilmoch_verified"):
+            print(f"[SKIP] Post rejected: not translated or verified by Tilmoch API.")
+            continue
         cand = resolve_candidate_for_item(item, candidates)
         if not cand:
             print("[WARN] Could not resolve candidate for item, skipping.")
