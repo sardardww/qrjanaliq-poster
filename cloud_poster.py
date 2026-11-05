@@ -245,6 +245,8 @@ AUTO_WORD_FIXES = [
     (r"\bFárǵona\b", "Ferǵana"),
     (r"\bfárǵona\b", "ferǵana"),
     (r"\bAlat\b", "Álot"),
+    (r"\bTórtkúl\b", "Tórtkól"),
+    (r"\btórtkúl\b", "tórtkól"),
     (r"\b(m|M)ínnetleme\b", r"\1innetleme"),
     (r"\bpricep\b", "tirkeme"),
     (r"\bPricep\b", "Tirkeme"),
@@ -256,12 +258,17 @@ AUTO_WORD_FIXES = [
     (r"\bTexnogeniyalıq\b", "Texnogen"),
 
     # 5. Strict Uzbekisms & Kazakhisms (Unambiguous words that are NEVER Karakalpak)
-        (r"\bjasand([ıi])\b", "jasama"),
+        (r"\bJÁ\b", "JI"),
+    (r"\bJÁ([a-zıóúáǵń]*)\b", r"JI\1"),
+    (r"\bjastar([a-zıóúáǵń]*)\b", r"jaslar\1"),
+    (r"\bJastar([a-zıóúáǵń]*)\b", r"Jaslar\1"),
+    (r"\bjasand([ıi])\b", "jasama"),
     (r"\bJasand([ıi])\b", "Jasama"),
     (r"\bjasandıq\b", "jasamalıq"),
     (r"\bJasandıq\b", "Jasamalıq"),
     (r"\bjasalma\b", "jasama"),
     (r"\bJasalma\b", "Jasama"),
+    (r"\bkrah([a-zıóúáǵń]*)\b", r"bankrotlıq\1"),
     (r"\bmayda bezorılıq\b", "mayda buzaqılıq"),
     (r"\bMayda bezorılıq\b", "Mayda buzaqılıq"),
     (r"\bkishi buzaqılıq\b", "mayda buzaqılıq"),
@@ -1524,7 +1531,10 @@ STRICT CONTENT BAN:
 Return ONLY a JSON array of objects with keys:
 - "candidate_idx": integer (MUST match the exact `idx` of the story you wrote about!)
 - "source_url": string (MUST equal `candidates[candidate_idx]["url"]`!)
-- "caption_html": string (Russian formatted caption ready for translation)
+- "lead_emoji": string (Country flag e.g. 🇺🇿, 🇵🇹, 🇰🇿, 🇨🇳, 🇺🇸, 🇩🇪 or single topical icon 🚀, ⚽️, 🛍, 💻, 🏆, ⚖️, 🚨)
+- "headline_ru": string (Engaging hook headline in Russian, plain text, NO emoji, NO tags)
+- "paragraph1_ru": string (Paragraph 1 in Russian: core event details, ages, dates, quotes in «...», exact numbers)
+- "paragraph2_ru": string (Paragraph 2 in Russian: context, background, PLUS interactive question to the readers)
 - "wikimedia_search_keywords": string (2-3 simple English nouns for backup photo search)
 """
 
@@ -1552,15 +1562,59 @@ Return ONLY a JSON array of objects with keys:
     print(f"[TRANSLATOR] Translating {len(parsed)} curated posts into Karakalpak via {KARAKALPAK_TRANSLATOR_API_URL}...")
     valid_items = []
     for it in parsed:
-        cap = it.get("caption_html", "")
-        if cap:
-            translated = translate_post_via_custom_api(cap, timeout=45, retries=2)
-            if not translated:
-                print(f"[SKIP] Post idx #{it.get('candidate_idx')} SKIPPED because Tilmoch translation failed.")
-                continue
-            it["caption_html"] = translated
-            it["tilmoch_verified"] = True
-            valid_items.append(it)
+        lead_emoji = it.get("lead_emoji") or "⚡️"
+        headline_ru = (it.get("headline_ru") or "").strip()
+        p1_ru = (it.get("paragraph1_ru") or "").strip()
+        p2_ru = (it.get("paragraph2_ru") or "").strip()
+
+        # Backward compatibility fallback if model outputs caption_html
+        if not headline_ru and it.get("caption_html"):
+            raw_cap = it["caption_html"]
+            parts = [p.strip() for p in raw_cap.split("\n\n") if p.strip()]
+            if parts:
+                headline_ru = re.sub(r'<[^>]+>', '', parts[0]).strip()
+                p1_ru = parts[1] if len(parts) > 1 else ""
+                p2_ru = parts[2] if len(parts) > 2 else ""
+
+        if not headline_ru or not p1_ru:
+            print(f"[SKIP] Post idx #{it.get('candidate_idx')} missing headline or paragraph1.")
+            continue
+
+        print(f"[TRANSLATE_API] Translating candidate #{it.get('candidate_idx')} components via Tilmoch...")
+        tr_headline = translate_post_via_custom_api(headline_ru, timeout=30, retries=2)
+        if not tr_headline:
+            print(f"[SKIP] Post idx #{it.get('candidate_idx')} SKIPPED because headline translation failed.")
+            continue
+
+        tr_p1 = translate_post_via_custom_api(p1_ru, timeout=45, retries=2)
+        if not tr_p1:
+            print(f"[SKIP] Post idx #{it.get('candidate_idx')} SKIPPED because paragraph 1 translation failed.")
+            continue
+
+        tr_p2 = ""
+        if p2_ru:
+            tr_p2 = translate_post_via_custom_api(p2_ru, timeout=45, retries=2) or ""
+
+        # Clean headline
+        clean_headline = re.sub(r'^[^\w\s]+', '', tr_headline).strip().rstrip(".")
+        clean_headline = re.sub(r'<[^>]+>', '', clean_headline).strip()
+
+        body_parts = [
+            f"{lead_emoji} <b>{clean_headline}</b>",
+            tr_p1.strip()
+        ]
+        if tr_p2.strip():
+            body_parts.append(tr_p2.strip())
+
+        constructed_cap = "\n\n".join(body_parts)
+
+        # Inject direct source link into paragraph 1 and append standardized footer
+        exact_url = it.get("source_url") or ""
+        constructed_cap = format_caption_with_direct_source_link(constructed_cap, exact_url)
+
+        it["caption_html"] = constructed_cap
+        it["tilmoch_verified"] = True
+        valid_items.append(it)
     return valid_items
 
 
@@ -1670,6 +1724,17 @@ Return ONLY a JSON array:
                     print(f"[LIT-CRITIC] Post #{pos} applied {len(audit)} linguistic fixes: {fixes_summary}")
                 new_cap = entry.get("clean_caption_html") or entry.get("caption_html")
                 if isinstance(new_cap, str) and len(new_cap) > 120:
+                    # Enforce that headline is bold and double newlines exist
+                    if "<b>" not in new_cap:
+                        lines = [ln.strip() for ln in new_cap.split("\n") if ln.strip()]
+                        if lines:
+                            first_line = lines[0]
+                            m = re.match(r"^([^\w\s]+\s*)(.*)$", first_line)
+                            if m:
+                                lines[0] = f"{m.group(1)}<b>{m.group(2).rstrip('.')}</b>"
+                            else:
+                                lines[0] = f"<b>{first_line.rstrip('.')}</b>"
+                            new_cap = "\n\n".join(lines)
                     items[pos]["caption_html"] = new_cap
         if duplicate_indices:
             items = [it for idx, it in enumerate(items) if idx not in duplicate_indices]
@@ -1882,6 +1947,18 @@ def audit_and_enforce_karakalpak_quality(caption: str, cand: dict[str, Any]) -> 
 
     # 4. Escape bare ampersands for Telegram HTML
     caption = re.sub(r"&(?!(?:amp|lt|gt|quot|#\d+|#x[0-9a-fA-F]+);)", "&amp;", caption)
+
+    # 4.5 Ensure bold headline tag and multi-paragraph separation are NEVER lost
+    if "<b>" not in caption:
+        lines = [ln.strip() for ln in caption.split("\n") if ln.strip()]
+        if lines:
+            first_line = lines[0]
+            m = re.match(r"^([^\w\s]+\s*)(.*)$", first_line)
+            if m:
+                lines[0] = f"{m.group(1)}<b>{m.group(2).rstrip('.')}</b>"
+            else:
+                lines[0] = f"<b>{first_line.rstrip('.')}</b>"
+            caption = "\n\n".join(lines)
 
     # 5. STRICT URL & FOCUS LINK ENFORCER: Inject exact direct source link to focus keyword and footer
     exact_url = cand.get("url") or cand.get("fallback_post_url") or ""
