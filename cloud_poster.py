@@ -1307,16 +1307,27 @@ KARAKALPAK_TRANSLATOR_API_URL = os.environ.get(
 )
 
 
-def ensure_render_service_warm():
-    """Wakes up Render translation API so translation calls respond in under 1 second."""
+def ensure_render_service_warm(max_wait_seconds: int = 60) -> bool:
+    """Proactively wakes up Render translation API if it's sleeping, waiting until it returns 200 OK."""
     health_url = "https://karakalpak-translator-api.onrender.com/health"
-    try:
-        req = urllib.request.Request(health_url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=45) as resp:
-            if resp.status == 200:
-                print("[WARMUP] Render Translation API is warm and ready!")
-    except Exception as e:
-        print(f"[WARMUP] Render warmup notice: {e}")
+    print("[WARMUP] Checking if Render Translation API is awake...")
+    start_time = time.time()
+    attempts = 0
+    while time.time() - start_time < max_wait_seconds:
+        attempts += 1
+        try:
+            req = urllib.request.Request(health_url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                if resp.status == 200:
+                    elapsed = round(time.time() - start_time, 1)
+                    print(f"[WARMUP] Render is AWAKE and READY (took {elapsed}s, attempt {attempts})!")
+                    return True
+        except Exception as e:
+            elapsed = round(time.time() - start_time, 1)
+            print(f"[WARMUP] Render waking up... ({e}, elapsed: {elapsed}s)")
+            time.sleep(3)
+    print(f"[WARMUP] Render did not respond within {max_wait_seconds}s.")
+    return False
 
 
 def translate_post_via_custom_api(text: str, timeout: int = 45, retries: int = 2) -> str:
