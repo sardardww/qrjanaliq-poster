@@ -4758,6 +4758,54 @@ def get_clean_photo_for_post(
 
 
 
+
+def extract_frame_from_video(video_url: str = "", video_bytes: bytes | None = None) -> bytes | None:
+    """Extract a clean JPG frame from video using ffmpeg or direct stream."""
+    ffmpeg_bin = shutil.which("ffmpeg")
+    if not ffmpeg_bin:
+        try:
+            import imageio_ffmpeg
+            ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
+        except Exception:
+            ffmpeg_bin = None
+
+    if not ffmpeg_bin:
+        return None
+
+    try:
+        if video_bytes and len(video_bytes) > 10000:
+            with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tf:
+                tf.write(video_bytes)
+                temp_path = tf.name
+            try:
+                cmd = [
+                    ffmpeg_bin, "-ss", "00:00:02", "-i", temp_path,
+                    "-vframes", "1", "-f", "image2pipe", "-vcodec", "mjpeg", "-"
+                ]
+                proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=15)
+                if proc.returncode == 0 and len(proc.stdout) > 2000:
+                    print(f"[MEDIA] Extracted clean frame from video file ({len(proc.stdout)} bytes)")
+                    return proc.stdout
+            finally:
+                if os.path.exists(temp_path):
+                    try:
+                        os.remove(temp_path)
+                    except Exception:
+                        pass
+        elif video_url and video_url.startswith("http"):
+            cmd = [
+                ffmpeg_bin, "-ss", "00:00:02", "-i", video_url,
+                "-vframes", "1", "-f", "image2pipe", "-vcodec", "mjpeg", "-"
+            ]
+            proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=20)
+            if proc.returncode == 0 and len(proc.stdout) > 2000:
+                print(f"[MEDIA] Extracted clean frame from video URL ({len(proc.stdout)} bytes)")
+                return proc.stdout
+    except Exception as exc:
+        print(f"[WARN] Frame extraction from video failed: {exc}")
+
+    return None
+
 def send_telegram_video(bot_token: str, chat_id: str, video_url: str, caption_html: str) -> dict[str, Any]:
 
     url = f"https://api.telegram.org/bot{bot_token}/sendVideo"
@@ -5093,19 +5141,28 @@ def main() -> int:
 
 
         if not res or not res.get("ok"):
-
-            photo_bytes = get_clean_photo_for_post(
-
-                client, cand, caption, item.get("wikimedia_search_keywords", "")
-
-            )
+            photo_bytes = None
+            # If video failed or was too large, extract frame or use video thumbnail first!
+            if video_urls:
+                print(f"[FALLBACK] Video send not suitable/failed. Extracting frame from video...")
+                photo_bytes = extract_frame_from_video(video_url=video_urls[0])
+            
+            if not photo_bytes and cand.get("photo_urls"):
+                for p_url in cand["photo_urls"]:
+                    p_resp = http_get(p_url)
+                    if p_resp and len(p_resp.content) > 3000:
+                        photo_bytes = p_resp.content
+                        print(f"[MEDIA] Using video thumbnail image ({len(photo_bytes)} bytes)")
+                        break
 
             if not photo_bytes:
+                photo_bytes = get_clean_photo_for_post(
+                    client, cand, caption, item.get("wikimedia_search_keywords", "")
+                )
 
-                print(f"[SKIP] Could not obtain clean related photo for {cand['url']}; blacklisting to prevent infinite loop & trying backup story.")
-
+            if not photo_bytes:
+                print(f"[SKIP] Could not obtain clean photo for {cand['url']}; blacklisting to prevent infinite loop & trying backup story.")
                 new_urls.append(normalize_url(cand["url"]))
-
                 continue
 
             res = send_telegram_photo(bot_token, chat_id, photo_bytes, caption)
