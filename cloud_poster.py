@@ -2171,7 +2171,22 @@ def send_telegram_photo(bot_token: str, chat_id: str, photo_bytes: bytes, captio
     return resp.json()
 
 
+def is_within_active_posting_hours() -> bool:
+    """Tashkent time (UTC+5): Active only from 04:00 to 00:00 (midnight).
+    Quiet sleep hours: 00:00 to 04:00 (no posts while audience is sleeping)."""
+    tashkent_tz = timezone(timedelta(hours=5))
+    now = datetime.now(tashkent_tz)
+    return 4 <= now.hour <= 23
+
+
 def main() -> int:
+    tashkent_tz = timezone(timedelta(hours=5))
+    now_uzt = datetime.now(tashkent_tz)
+    if not is_within_active_posting_hours():
+        print(f"[SLEEP MODE] Tashkent time is {now_uzt.strftime('%H:%M:%S')} (Quiet hours: 00:00 - 04:00).")
+        print("             Audience is sleeping. Exiting cleanly without posting.")
+        return 0
+
     bot_token, chat_id, gemini_key, max_posts = load_config()
     client = genai.Client(api_key=gemini_key)
 
