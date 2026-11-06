@@ -2,7 +2,7 @@
 
 ## Channel & Schedule Overview
 - **Channel:** `@qaraqalpaqshajanaliqlar` (`https://t.me/qaraqalpaqshajanaliqlar`)
-- **Active Posting Schedule:** Strictly every 10 minutes from **04:00 AM to 00:00 AM (Midnight)** Tashkent time (`Asia/Tashkent`, UTC+5).
+- **Active Posting Schedule:** Strictly every 15 minutes (:02, :17, :32, :47) from **04:00 AM to 00:00 AM (Midnight)** Tashkent time (`Asia/Tashkent`, UTC+5).
 - **Quiet Sleep Hours:** **00:00 AM to 04:00 AM** (No posts while the audience is sleeping). Both GitHub Actions self-chaining and `cloud_poster.py` automatically enter quiet sleep mode during these hours.
 - **Language:** 100% pure **Karakalpak Latin** (`Qaraqalpaq ádebiy tili` under the official 2016 Law: `Á á, Ó ó, Ú ú, Í ı, Ǵ ǵ, Ń ń`).
 - **Translation Engine:** Render Tilmoch Translation API. Strict rule: If Tilmoch translation fails or errors, the post is SKIPPED (never post arbitrary or unverified text).
