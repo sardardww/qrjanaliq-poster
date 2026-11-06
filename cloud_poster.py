@@ -392,6 +392,19 @@ AUTO_WORD_FIXES = [
     (r"\bmoyındap\b", "moyınlap"),
     (r"\bmoyındaw\b", "moyınlaw"),
     (r"\bmártebe\b", "márte"),
+    # Critical audited slips from posts 142-143
+    (r"\bbaslı qalaq\b", ""),
+    (r"\bkinoqumar([a-zıóúáǵń]*)\b", r"kinosúyiwshi\1"),
+    (r"\bKinoqumar([a-zıóúáǵń]*)\b", r"Kinosúyiwshi\1"),
+    (r"\bdereklar\b", "derekler"),
+    (r"\bDereklar\b", "Derekler"),
+    (r"\boqsham([a-zıóúáǵń]*)\b", r"kesh\1"),
+    (r"\bOqsham([a-zıóúáǵń]*)\b", r"Kesh\1"),
+    (r"\bxizmet([a-zıóúáǵń]*)\b", r"xızmet\1"),
+    (r"\bXizmet([a-zıóúáǵń]*)\b", r"Xızmet\1"),
+    (r"\bBıqıńǵı\b", "Kúshli"),
+    (r"\bjasawshı([a-zıóúáǵń]*)\b", r"turǵın\1"),
+    (r"\bJasawshı([a-zıóúáǵń]*)\b", r"Turǵın\1"),
 ]
 
 TELEGRAM_SOURCES = [
@@ -1865,6 +1878,20 @@ def transliterate_and_fix_outside_tags(html_text: str) -> str:
     return "".join(out)
 
 
+STANDARD_FOOTER = '👉 <a href="https://t.me/+ccz2kfdc8Fg1ZGYy">Qaraqalpaqsha jańalıqlar — aǵza bolıw</a>'
+
+def ensure_single_footer(text: str) -> str:
+    """Strips all duplicate footers and ensures strictly ONE footer at the end."""
+    lines = text.split("\n")
+    cleaned_lines = []
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("👉") or "aǵza bolıw" in stripped.lower() or "t.me/qaraqalpaqshajanaliqlar" in stripped.lower() or "t.me/+ccz2kfdc8Fg1ZGYy" in stripped.lower():
+            continue
+        cleaned_lines.append(line)
+    cleaned = "\n".join(cleaned_lines).rstrip()
+    return cleaned + "\n\n" + STANDARD_FOOTER
+
 def sanitize_and_validate_caption(caption: str) -> str | None:
     caption = caption.lstrip("\ufeff").strip()
     caption = caption.replace("<br>", "\n").replace("<br/>", "\n").replace("<br />", "\n")
@@ -1880,8 +1907,7 @@ def sanitize_and_validate_caption(caption: str) -> str | None:
     if CYRILLIC_RE.search(visible_text):
         print(f"[WARN] Unmapped Cyrillic still present, rejecting: {CYRILLIC_RE.findall(visible_text)}")
         return None
-    if "@qaraqalpaqshajanaliqlar" not in caption:
-        caption = caption.rstrip() + '\n👉 <a href="https://t.me/+ccz2kfdc8Fg1ZGYy">Qaraqalpaqsha jańalıqlar — aǵza bolıw</a>'
+    caption = ensure_single_footer(caption)
     return caption
 
 
@@ -1981,11 +2007,8 @@ def format_caption_with_direct_source_link(caption: str, exact_url: str, source_
                 caption = caption[:sentence_verb_match.start(1)] + f'<a href="{exact_url}">{verb}</a>' + caption[sentence_verb_match.end(1):]
                 wrapped_body = True
 
-    # Strip existing footer before appending standardized double-newline footer
-    footer = '👉 <a href="https://t.me/+ccz2kfdc8Fg1ZGYy">Qaraqalpaqsha jańalıqlar — aǵza bolıw</a>'
-    if "@qaraqalpaqshajanaliqlar" in caption:
-        caption = re.sub(r'\n*👉\s*<a\s+href="https://t\.me/qaraqalpaqshajanaliqlar"[^>]*>.*?</a>', '', caption)
-    caption = caption.rstrip() + '\n\n' + footer
+    # Guarantee strictly ONE single footer
+    caption = ensure_single_footer(caption)
 
     # Normalize excessive newlines (max 2)
     caption = re.sub(r'\n{3,}', '\n\n', caption)
@@ -2036,9 +2059,8 @@ def audit_and_enforce_karakalpak_quality(caption: str, cand: dict[str, Any]) -> 
     if exact_url:
         caption = format_caption_with_direct_source_link(caption, exact_url, source_name)
 
-    # 6. Signature assurance
-    if "@qaraqalpaqshajanaliqlar" not in caption:
-        caption = caption.rstrip() + '\n\n👉 <a href="https://t.me/+ccz2kfdc8Fg1ZGYy">Qaraqalpaqsha jańalıqlar — aǵza bolıw</a>'
+    # 6. Signature assurance (strictly ONE clean footer)
+    caption = ensure_single_footer(caption)
 
     # 7. Length and alphabet validation
     visible_text = BeautifulSoup(caption, "html.parser").get_text()
