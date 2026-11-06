@@ -931,6 +931,25 @@ AUTO_WORD_FIXES = [
     (r"\b(q|Q)ádemler taslamaqta\b", r"ilajlar kórmekte"),
     (r"\bqupıya orın([a-zıóúáǵń]*)\b", r"jasırın orın\1"),
     (r"\bǵalabalıq sport([a-zıóúáǵń]*)\b", r"ǵalaba sport\1"),
+    # New audited slips from posts #452 - #459
+    (r"\bJIÓ\b", "JI"),
+    (r"\bbandlıq([a-zıóúáǵń]*)\b", r"bántlik\1"),
+    (r"\bBandlıq([a-zıóúáǵń]*)\b", r"Bántlik\1"),
+    (r"\bsotsial([a-zıóúáǵń]*)\b", r"social\1"),
+    (r"\bSotsial([a-zıóúáǵń]*)\b", r"Social\1"),
+    (r"\bhábezlik\b", "bezew"),
+    (r"\bfaxriy([a-zıóúáǵń]*)\b", r"nuranıy\1"),
+    (r"\bFaxriy([a-zıóúáǵń]*)\b", r"Nuranıy\1"),
+    (r"\btınıp ald([ıi])\b", "qolǵa túsirdi"),
+    (r"\bmıyúwe([a-zıóúáǵń]*)\b", r"miywe\1"),
+    (r"\b(t|T)aǵınshaqlardı jaratılıw\b", r"\1aǵınshaqlardı jasaw"),
+    (r"\b(p|P)ısıw hám tigiw\b", r"\1ishiw hám tigiw"),
+    (r"\bkeshke baǵdarlaması\b", "keshki baǵdarlama"),
+    (r"\bterek ekti\b", "terek egildi"),
+    (r"\bhákimligi qasında\b", "hákimiyatı qasında"),
+    (r"\bshınjırshasın\b", "jetkerip beriw dizbegin"),
+    (r"\bgárezlilikti\b", "ǵárezlilikti"),
+    (r"\binnovacialıq\b", "innovaciyalıq"),
 ]
 
 
