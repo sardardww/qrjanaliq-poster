@@ -36,8 +36,10 @@ Every post MUST follow a clean, balanced narrative structure without artificial 
 
 ## 2. Topic Mix & Content Balance
 
-1. **50% World, Science & Technology:** Space missions (NASA/JWST), AI and robotics breakthroughs, discoveries, global sports records, and major international headlines.
-2. **50% Karakalpakstan & Uzbekistan Citizen Utility:** Concrete laws, tariffs, benefits, deadlines, safety alerts, infrastructure, and regional progress.
-3. **Zero Advertising:** Strictly NEVER post commercial ads, retail discounts, shop promos, or real estate listings.
-4. **Zero Violence/Rape:** Strictly prohibited from covering sexual crimes, rape, or pedophilia.
-5. **Source Diversity:** Favor primary official sources, ministries, and international wires. Strongly discourage repetitive aggregators (kun.uz, KarPressa, kknews.uz).
+1. **Strict 3-Category Dynamic Rotation (QR / UZ / WORLD):** AI Studio analyzes the last 3 published posts on the channel. Whichever category is missing among the last 3 posts is strictly mandated for the next publication:
+   - **QR (Qaraqalpaqstan):** Nukus, districts (Qońırat, Moynaq, Xojeli, Shimbay, etc.), Joqarǵı Keńes, local events, infrastructure, and ecology. Karakalpakstan regional news must NEVER be omitted!
+   - **UZ (Ózbekstan):** National reforms, laws, citizen benefits, social protection, economy, and official ministries.
+   - **WORLD (Dúnya / Tech):** Global headlines, NASA/space missions, artificial intelligence, robotics, and scientific discoveries.
+2. **Zero Advertising:** Strictly NEVER post commercial ads, retail discounts, shop promos, or real estate listings.
+3. **Zero Violence/Rape:** Strictly prohibited from covering sexual crimes, rape, or pedophilia.
+4. **Sourcing Integrity:** Primary official Karakalpakstan media (kknews.uz, KarPressa, xaliq_ushin, joqargikenes), Uzbekistan official gazettes (UzA, gov.uz), and international science/world wires (NASA, Nature, Reuters, BBC, TechCrunch). Disfavor repetitive generic aggregators (kun.uz).
