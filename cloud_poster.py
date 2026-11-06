@@ -306,20 +306,28 @@ CYR_TO_QQ_LATIN = {
 
     "Я": "Ya", "я": "ya",
 
-    # Non-Karakalpak Turkish diacritics sometimes copied from source channels
-
-    "Ş": "Sh", "ş": "sh",
-
-    "Ç": "Ch", "ç": "ch",
-
-    "Ğ": "Ǵ", "ğ": "ǵ",
-
+    # Non-Karakalpak foreign Latin diacritics (Tatar, Turkmen, Turkish, German, Finnish, etc.)
+    "Ä": "Á", "ä": "á",
     "Ö": "Ó", "ö": "ó",
-
     "Ü": "Ú", "ü": "ú",
-
+    "Ğ": "Ǵ", "ğ": "ǵ",
+    "Ş": "Sh", "ş": "sh",
+    "Ç": "Ch", "ç": "ch",
+    "Ñ": "Ń", "ñ": "ń",
     "İ": "I",
-
+    "Â": "A", "â": "a",
+    "Ê": "E", "ê": "e",
+    "Î": "I", "î": "i",
+    "Ô": "O", "ô": "o",
+    "Û": "U", "û": "u",
+    "Ë": "E", "ë": "e",
+    "Ï": "I", "ï": "i",
+    "Ÿ": "Y", "ÿ": "y",
+    "À": "A", "à": "a",
+    "È": "E", "è": "e",
+    "Ì": "I", "ì": "i",
+    "Ò": "O", "ò": "o",
+    "Ù": "U", "ù": "u",
 }
 
 
@@ -342,19 +350,17 @@ AUTO_WORD_FIXES = [
 
 
 
-    # 2. Turkish/foreign letters sometimes output by OCR/translators
-
-    (r"Ş", "Sh"), (r"ş", "sh"),
-
-    (r"Ç", "Ch"), (r"ç", "ch"),
-
-    (r"Ğ", "Ǵ"), (r"ğ", "ǵ"),
-
+    # 2. Foreign Latin letters with diacritics (Tatar, Turkmen, Turkish, German, etc.)
+    (r"Ä", "Á"), (r"ä", "á"),
     (r"Ö", "Ó"), (r"ö", "ó"),
-
     (r"Ü", "Ú"), (r"ü", "ú"),
-
+    (r"Ğ", "Ǵ"), (r"ğ", "ǵ"),
+    (r"Ş", "Sh"), (r"ş", "sh"),
+    (r"Ç", "Ch"), (r"ç", "ch"),
+    (r"Ñ", "Ń"), (r"ñ", "ń"),
     (r"İ", "I"), (r"ı", "ı"),
+    (r"Ë", "E"), (r"ë", "e"),
+    (r"Ï", "I"), (r"ï", "i"),
 
 
 
@@ -862,6 +868,51 @@ AUTO_WORD_FIXES = [
     (r"\bzıyanlan([a-zıóúáǵń]*)\b", r"zaqımlan\1"),
     (r"\bZıyanlan([a-zıóúáǵń]*)\b", r"Zaqımlan\1"),
     (r"\bbarlıǵı tórt saat\b", "barı-joǵı tórt saat"),
+
+    # Audited slips from latest 50 posts (#113-#294)
+    (r"\bp'edestal([a-zıóúáǵń]*)\b", r"pedestal\1"),
+    (r"\bP'edestal([a-zıóúáǵń]*)\b", r"Pedestal\1"),
+    (r"\bjelelik arza\b", "elektronlıq arza"),
+    (r"\bkadastrdi\b", "kadastrdı"),
+    (r"\bKadastrdi\b", "Kadastrdı"),
+    (r"\bsignaldi\b", "signaldı"),
+    (r"\bSignaldi\b", "Signaldı"),
+    (r"\bjırtqıshdı\b", "jırtqıshtı"),
+    (r"\bıytı menen\b", "iyti menen"),
+    (r"\baqsha jıliwda\b", "aqsha jıllawda"),
+    (r"\bcirkumbinnıń ekzoplaneta\b", "cirkumbinar ekzoplaneta"),
+    (r"\bretsenziy([a-zıóúáǵń]*)\b", r"recenziy\1"),
+    (r"\bRetsenziy([a-zıóúáǵń]*)\b", r"Recenziy\1"),
+    (r"\btastiyıqlaw([a-zıóúáǵń]*)\b", r"tastıyıqlaw\1"),
+    (r"\bTastiyıqlaw([a-zıóúáǵń]*)\b", r"Tastıyıqlaw\1"),
+
+    # Audited slips from posts #294-#386
+    (r"\bUllı milletlik\b", "Ulıwma milliy"),
+    (r"\bullı milletlik\b", "ulıwma milliy"),
+    (r"\b(t|T)erek eguw\b", r"\1erek egiw"),
+    (r"\b(k|K)ólem taraw boyınsha\b", r"\1óklemzarlastırıw boyınsha"),
+    (r"\bmáhällä([a-zıóúáǵń]*)\b", r"máhálle\1"),
+    (r"\bmáhállá([a-zıóúáǵń]*)\b", r"máhálle\1"),
+    (r"\bMáhällä([a-zıóúáǵń]*)\b", r"Máhálle\1"),
+    (r"\bMáhállá([a-zıóúáǵń]*)\b", r"Máhálle\1"),
+    (r"\bKeniya sudi\b", "Keniya sudı"),
+    (r"\bjasy tolmaǵan\b", "jası tolmaǵan"),
+    (r"\bkómılgen\b", "kómilgen"),
+    (r"\bKorolylıq\b", "Korolligi"),
+    (r"\b(t|T)arafdar([a-zıóúáǵń]*)\b", r"\1árepdar\2"),
+    (r"\bgúres sistemaları\b", "jawıngerlik sistemalar"),
+    (r"\bkóp jıllardan berli\b", "kóp jıllardan beri"),
+    (r"\bnarkobuzaqılıq([a-zıóúáǵń]*)\b", r"narkojınayatshılıq\1"),
+    (r"\bnarkotikalıq qurallard([ıi])\b", "narkotikalıq zatlardı"),
+    (r"\bbayraqdarlar\b", "sawrınlı orın iyeleri"),
+    (r"\bmars tuqımı([a-zıóúáǵń]*)\b", r"mars jınısı\1"),
+    (r"\b(m|M)eteorittıń\b", r"\1eteorittiń"),
+    (r"\btereń erte dáwirler([a-zıóúáǵń]*)\b", r"áyyemgi dáwirler\1"),
+    (r"\bshártterin\b", "shártlerin"),
+    (r"\b(t|T)ibbiyot([a-zıóúáǵń]*)\b", r"\1edicina\2"),
+    (r"\b(t|T)ezlestir([a-zıóúáǵń]*)\b", r"\1ezlet\2"),
+    (r"\bintellekten paydalan([a-zıóúáǵń]*)\b", r"intellektten paydalan\1"),
+    (r"\baqsha juwıw\b", "aqsha jıllaw"),
 ]
 
 
