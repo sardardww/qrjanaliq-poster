@@ -324,6 +324,74 @@ AUTO_WORD_FIXES = [
     (r"\bJıynalıs\b", "Májilis"),
     (r"\bso'm\b", "sum"),
     (r"\bsoʻm\b", "sum"),
+    # Additional critical slips & anti-Uzbekisms audited from posts 97-139
+    (r"\bprezidendi\b", "prezidenti"),
+    (r"\bPrezidendi\b", "Prezidenti"),
+    (r"\bShavqat\b", "Shavkat"),
+    (r"\bbazıxana\b", "bajıxana"),
+    (r"\bBazıxana\b", "Bajıxana"),
+    (r"\btamoxana\b", "bajıxana"),
+    (r"\bTamoxana\b", "Bajıxana"),
+    (r"\bdvigatil([a-zıóúáǵń]*)\b", r"dvigatel\1"),
+    (r"\bDvigatil([a-zıóúáǵń]*)\b", r"Dvigatel\1"),
+    (r"\bpanelil([a-zıóúáǵń]*)\b", r"panell\1"),
+    (r"\bpanelgel([a-zıóúáǵń]*)\b", r"panellerg\1"),
+    (r"\bBizinsiz\b", "Biziń"),
+    (r"\bbizinsiz\b", "biziń"),
+    (r"\bobyektst([a-zıóúáǵń]*)\b", r"obyekt\1"),
+    (r"\basteroyid([a-zıóúáǵń]*)\b", r"asteroid\1"),
+    (r"\bátirindegi\b", "átirapındaǵı"),
+    (r"\b(x|X)alıq aralıq\b", r"\1alıqaralıq"),
+    (r"\bjumısqar sapar([a-zıóúáǵń]*)\b", r"jumıs sapar\1"),
+    (r"\bÁdministraciya([a-zıóúáǵń]*)\b", r"Administraciya\1"),
+    (r"\bádministraciya([a-zıóúáǵń]*)\b", r"administraciya\1"),
+    (r"\bmenedjerdiler\b", "menedjerler"),
+    (r"\btop-menedjerdiler\b", "top-menedjerler"),
+    (r"\bnapaqá\b", "napaqa"),
+    (r"\bNapaqá\b", "Napaqa"),
+    (r"\btirishilik\b", "tirshilik"),
+    (r"\bTirishilik\b", "Tirshilik"),
+    (r"\btábiyǵiy\b", "tábiyiy"),
+    (r"\bTábiyǵiy\b", "Tábiyiy"),
+    (r"\bkútew([a-zıóúáǵń]*)\b", r"kútiw\1"),
+    (r"\bKútew([a-zıóúáǵń]*)\b", r"Kútiw\1"),
+    (r"\bkonkurenciya\b", "báseki"),
+    (r"\bKonkurenciya\b", "Báseki"),
+    (r"\bKonkurenciya komiteti\b", "Báseki komiteti"),
+    (r"\bjáriyalad([ıi])\b", r"jariylad\1"),
+    (r"\bJáriyalad([ıi])\b", r"Jariylad\1"),
+    (r"\bUsırasıw\b", "Ushırasıw"),
+    (r"\busırasıw\b", "ushırasıw"),
+    (r"\b(r|R)ayon turıwshı([a-zıóúáǵń]*)\b", r"\1ayon turǵın\2"),
+    (r"\b(b|B)untan aldın\b", r"\1unnan aldın"),
+    (r"\b(s|S)ebepti\b", r"\1ebepli"),
+    (r"\bBunga\b", "Buǵan"),
+    (r"\bbunga\b", "buǵan"),
+    (r"\b(f|F)aktni\b", r"\1aktti"),
+    (r"\b(b|B)olama\?", r"\1ola ma?"),
+    (r"\b(i|I)mkaniyat bereme\?", r"\1mkaniyat bere me?"),
+    (r"\b(m|M)úmkinshilik bereme\?", r"\1úmkinshilik bere me?"),
+    (r"\b(d|D)odalawda\b", r"\1alqılamaqta"),
+    (r"\b(p|P)akistanlı\b", r"\1akistanlıq"),
+    (r"\b(s|S)tantsiya([a-zıóúáǵń]*)\b", r"\1tanciya\2"),
+    (r"\b(a|A)ktsiya([a-zıóúáǵń]*)\b", r"\1kciya\2"),
+    (r"\bhámde\b", "hám de"),
+    (r"\bHámde\b", "Hám de"),
+    # Audited from posts 140-141
+    (r"\bdepartamendi\b", "departamenti"),
+    (r"\bDepartamendi\b", "Departamenti"),
+    (r"\bparlamendi\b", "parlamenti"),
+    (r"\bParlamendi\b", "Parlamenti"),
+    (r"\bwáqıya([a-zıóúáǵń]*)\b", r"waqıya\1"),
+    (r"\bWáqıya([a-zıóúáǵń]*)\b", r"Waqıya\1"),
+    (r"\bkitniń\b", "kittiń"),
+    (r"\balımlar\b", "ilimpazlar"),
+    (r"\bAlımlar\b", "Ilimpazlar"),
+    (r"\babıroylı\b", "abıraylı"),
+    (r"\bAbıroylı\b", "Abıraylı"),
+    (r"\bmoyındap\b", "moyınlap"),
+    (r"\bmoyındaw\b", "moyınlaw"),
+    (r"\bmártebe\b", "márte"),
 ]
 
 TELEGRAM_SOURCES = [
@@ -1492,7 +1560,7 @@ Every single post MUST be structured as a compelling multi-paragraph journalisti
 
 А вы хоть раз заказывали что-нибудь через Market Yandex Go? Или даже не знали о его существовании?
 
-👉 <a href="https://t.me/qaraqalpaqshajanaliqlar">@qaraqalpaqshajanaliqlar — aǵza bolıw</a>
+👉 <a href="https://t.me/+ccz2kfdc8Fg1ZGYy">Qaraqalpaqsha jańalıqlar — aǵza bolıw</a>
 
 [Model Structure Example 2 — Sports/World/Discovery]:
 🇵🇹 <b>Криштиану Роналду объявил о завершении карьеры в сборной Португалии</b>
@@ -1501,7 +1569,7 @@ Every single post MUST be structured as a compelling multi-paragraph journalisti
 
 В составе сборной Роналду выиграл Евро-2016 и дважды Лигу наций УЕФА. Как думаете, сможет ли кто-нибудь в ближайшие десятилетия побить его рекорд?
 
-👉 <a href="https://t.me/qaraqalpaqshajanaliqlar">@qaraqalpaqshajanaliqlar — aǵza bolıw</a>
+👉 <a href="https://t.me/+ccz2kfdc8Fg1ZGYy">Qaraqalpaqsha jańalıqlar — aǵza bolıw</a>
 
 CRITICAL FORMATTING INSTRUCTIONS (MAINTAIN PROFESSIONAL BALANCE — DO NOT OVERDO EMOJIS OR QUESTIONS):
 1. LEAD HEADLINE:
@@ -1517,7 +1585,7 @@ CRITICAL FORMATTING INSTRUCTIONS (MAINTAIN PROFESSIONAL BALANCE — DO NOT OVERD
 4. STRICT: ZERO BULLET POINTS! Absolutely NEVER use bullet lists (🔹, ▪️, ➖, •, etc.)! Everything must be fluent, engaging narrative prose.
 5. STRICT: NO SEPARATE SOURCE LINE! NEVER add "Источник:", "Derek:", or "Подробнее:". The link is embedded in the narrative.
 6. CLOSING FOOTER:
-👉 <a href="https://t.me/qaraqalpaqshajanaliqlar">@qaraqalpaqshajanaliqlar — aǵza bolıw</a>
+👉 <a href="https://t.me/+ccz2kfdc8Fg1ZGYy">Qaraqalpaqsha jańalıqlar — aǵza bolıw</a>
 7. LENGTH: Visible Russian text between 450 and 800 characters.
 
 YOUR TASK:
@@ -1680,7 +1748,7 @@ INSTRUCTIONS FOR EACH ITEM:
    - PRESERVE all HTML formatting tags (<b>, <i>, <blockquote>, <a href="...">) intact!
    - PRESERVE exact numbers, dates, names, quotes «...», and embedded links intact!
    - PRESERVE the EXACT 2-paragraph narrative layout (\n\n between Headline, Paragraph 1, Paragraph 2, and Footer). NEVER collapse the paragraphs into a single text block!
-   - PRESERVE the closing link intact: 👉 <a href="https://t.me/qaraqalpaqshajanaliqlar">@qaraqalpaqshajanaliqlar — aǵza bolıw</a>
+   - PRESERVE the closing link intact: 👉 <a href="https://t.me/+ccz2kfdc8Fg1ZGYy">Qaraqalpaqsha jańalıqlar — aǵza bolıw</a>
 
 INPUT ITEMS:
 {json.dumps(items_payload, ensure_ascii=False, indent=2)}
@@ -1813,7 +1881,7 @@ def sanitize_and_validate_caption(caption: str) -> str | None:
         print(f"[WARN] Unmapped Cyrillic still present, rejecting: {CYRILLIC_RE.findall(visible_text)}")
         return None
     if "@qaraqalpaqshajanaliqlar" not in caption:
-        caption = caption.rstrip() + '\n👉 <a href="https://t.me/qaraqalpaqshajanaliqlar">@qaraqalpaqshajanaliqlar — aǵza bolıw</a>'
+        caption = caption.rstrip() + '\n👉 <a href="https://t.me/+ccz2kfdc8Fg1ZGYy">Qaraqalpaqsha jańalıqlar — aǵza bolıw</a>'
     return caption
 
 
@@ -1884,7 +1952,7 @@ def format_caption_with_direct_source_link(caption: str, exact_url: str, source_
     has_external_link = False
     for a in soup.find_all("a"):
         href = a.get("href", "")
-        if "qaraqalpaqshajanaliqlar" not in href:
+        if "qaraqalpaqshajanaliqlar" not in href and "+ccz2kfdc8Fg1ZGYy" not in href:
             a["href"] = exact_url
             has_external_link = True
             break
@@ -1914,7 +1982,7 @@ def format_caption_with_direct_source_link(caption: str, exact_url: str, source_
                 wrapped_body = True
 
     # Strip existing footer before appending standardized double-newline footer
-    footer = '👉 <a href="https://t.me/qaraqalpaqshajanaliqlar">@qaraqalpaqshajanaliqlar — aǵza bolıw</a>'
+    footer = '👉 <a href="https://t.me/+ccz2kfdc8Fg1ZGYy">Qaraqalpaqsha jańalıqlar — aǵza bolıw</a>'
     if "@qaraqalpaqshajanaliqlar" in caption:
         caption = re.sub(r'\n*👉\s*<a\s+href="https://t\.me/qaraqalpaqshajanaliqlar"[^>]*>.*?</a>', '', caption)
     caption = caption.rstrip() + '\n\n' + footer
@@ -1970,7 +2038,7 @@ def audit_and_enforce_karakalpak_quality(caption: str, cand: dict[str, Any]) -> 
 
     # 6. Signature assurance
     if "@qaraqalpaqshajanaliqlar" not in caption:
-        caption = caption.rstrip() + '\n\n👉 <a href="https://t.me/qaraqalpaqshajanaliqlar">@qaraqalpaqshajanaliqlar — aǵza bolıw</a>'
+        caption = caption.rstrip() + '\n\n👉 <a href="https://t.me/+ccz2kfdc8Fg1ZGYy">Qaraqalpaqsha jańalıqlar — aǵza bolıw</a>'
 
     # 7. Length and alphabet validation
     visible_text = BeautifulSoup(caption, "html.parser").get_text()
