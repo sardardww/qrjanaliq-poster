@@ -30,7 +30,8 @@ Every post MUST follow a clean, balanced narrative structure without artificial 
 4. **Interactive Questions — Selective & Natural:** Do NOT add questions to every post! In most posts (economic data, laws, science, accidents, official decisions), Paragraph 2 is a purely factual conclusion. Reserve questions only for occasions where public discussion is natural (~20% of posts).
 5. **Single Embedded Source Link:** Wrap exactly ONE natural focus action verb or keyword in Paragraph 1 with `<a href="{exact_url}">...</a>`.
 6. **NO Redundant Trailing Source Lines:** Strictly NEVER append "Derek:", "Tolıq maǵlıwmatlar bul jerde", or "Manba:".
-7. **Character Length:** Visible text between 450 and 850 characters.
+7. **Strict Factual Grounding & Zero Hallucination:** Every single fact, quote, number, name, reason, and official statement MUST be 100% grounded in the source text. Strictly NEVER invent quotes from officials ("dep málim etti basqarma wákilleri", "mutasaddilar bildirdi"), reasons ("dıyqanlardıń miyneti arqasında"), or speculative claims not in the source. If a source is short (e.g. video headline), keep the summary concise and strictly true to what is actually stated. Factual truth strictly overrides length!
+8. **Character Length:** Typically between 300 and 750 characters. For brief official notices, concise factual brevity is strongly preferred over invented fluff. Never pad with fake quotes or filler text.
 
 ---
 
