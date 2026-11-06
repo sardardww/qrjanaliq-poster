@@ -1062,10 +1062,10 @@ def build_balanced_candidate_pool(
     """Round-robin by category with heavy discouragement of repetitive aggregators (kun.uz, KarPressa, kknews),
     strict commercial ad filtering, and strong boost for authentic primary world, tech, and official gazettes."""
     quotas = {
-        "world": 25,
-        "world_tech": 18,
-        "karakalpakstan": 10,
-        "citizen_uzbekistan": 10
+        "karakalpakstan": 25,
+        "citizen_uzbekistan": 20,
+        "world": 20,
+        "world_tech": 15
     }
     
     # Filter out commercial advertisements
@@ -1084,9 +1084,9 @@ def build_balanced_candidate_pool(
         dt = parse_pub_datetime(c.get("published_at", ""))
         score = dt.timestamp() if dt else 0.0
         src = c.get("source_name", "").lower()
-        if src in DISCOURAGED_SOURCES or any(d in src for d in ["kun.uz", "kknews", "karpress"]):
+        if src in DISCOURAGED_SOURCES or any(d in src for d in ["kun.uz"]):
             score -= 100000.0  # Heavily penalize overused aggregators
-        elif src in AUTHENTIC_SOURCES or any(a in src for a in ["nasa", "nature", "reuters", "bbc", "guardian", "techcrunch", "uza.uz", "xaliq_ushin", "joqargikenes"]):
+        elif src in AUTHENTIC_SOURCES or any(a in src for a in ["nasa", "nature", "reuters", "bbc", "guardian", "techcrunch", "uza.uz", "xaliq_ushin", "joqargikenes", "kknews", "karpress", "karinform"]):
             score += 50000.0   # Heavily boost primary authentic sources
         return score
 
@@ -1105,7 +1105,7 @@ def build_balanced_candidate_pool(
             if key in seen_urls:
                 continue
             src = c.get("source_name", "").lower()
-            is_discouraged = src in DISCOURAGED_SOURCES or any(d in src for d in ["kun.uz", "kknews", "karpress"])
+            is_discouraged = src in DISCOURAGED_SOURCES or any(d in src for d in ["kun.uz"])
             if is_discouraged:
                 if total_discouraged_taken >= MAX_DISCOURAGED_TOTAL:
                     continue
@@ -1427,12 +1427,11 @@ COMMERCIAL_AD_REGEX = re.compile(
 )
 
 DISCOURAGED_SOURCES = {
-    "kun.uz", "kunuz", "kunuzru",
-    "kknews.uz", "kknews_uz",
-    "karpressa", "karpress"
+    "kun.uz", "kunuz", "kunuzru"
 }
 
 AUTHENTIC_SOURCES = {
+    "kknews", "kknews.uz", "kknews_uz", "karpress", "karpressa", "karinform",
     "xaliq_ushin", "joqargikenes", "qresministrlerkenesi", "jaslar_isleri_agentligi",
     "krbajixana", "turtkulhokim_uz", "presstaqiyatas", "kanlikulnews", "xodjeyli_rk",
     "uza.uz", "press_secretary_uz", "uzbprokuratura", "raqobatgovuz", "mygovuz",
@@ -1507,29 +1506,102 @@ def translate_post_via_custom_api(text: str, timeout: int = 45, retries: int = 2
     return None
 
 
+QR_CATEGORY_REGEX = re.compile(
+    r"(?i)\b(qaraqalpaq|qaraqalpaqstan|nókis|nokis|nukus|qońırat|qonirat|moynaq|xojeli|shimbay|"
+    r"taqıyatas|beruniy|tórtkúl|tortkul|bozataw|qanlıkól|kegeyli|taxtakópir|ellikqala|qaraózek|"
+    r"ámiwdárya|amiwdarya|joqarǵı keńes|joqargi kenes|ministrler keńesi|aral teńizi|aral|karpress|kknews)\w*"
+)
+
+UZ_CATEGORY_REGEX = re.compile(
+    r"(?i)\b(ózbekstan|ozbekstan|tashkent|toshkent|húkimet|senat|parlament|samarqand|buxoro|"
+    r"andijon|fergana|fargʻona|namangan|qashqadaryo|surxondaryo|jizzax|sirdaryo|navoiy|xorazm|"
+    r"oraylıq bank|solıq|pensiya|kadastr|sud|mámleketlik|som|vazirlik)\w*"
+)
+
+def strip_post_footer(text: str) -> str:
+    """Strips footer from text so channel handle does not falsely trigger QR category on every post."""
+    lines = [
+        ln for ln in text.split("\n")
+        if not (ln.strip().startswith("👉") or "aǵza bolıw" in ln.lower() or "qaraqalpaqsha janaliqlar" in ln.lower() or "qaraqalpaqshajanaliqlar" in ln.lower() or "+ccz2kfdc8Fg1ZGYy" in ln)
+    ]
+    return "\n".join(lines)
+
+def classify_channel_post(text: str) -> str:
+    """Classifies a published post into QR, UZ, or WORLD based on content (excluding footer)."""
+    body = strip_post_footer(text)
+    if QR_CATEGORY_REGEX.search(body):
+        return "QR"
+    elif UZ_CATEGORY_REGEX.search(body):
+        return "UZ"
+    else:
+        return "WORLD"
+
+def analyze_last_3_posts_and_get_target(existing_posts: list[str]) -> tuple[str, list[dict[str, Any]], str]:
+    """
+    Analyzes the last 3 published posts on the channel.
+    If QR, UZ, or WORLD is missing from the last 3 posts, returns that missing category as target.
+    Priority if multiple missing: QR > UZ > WORLD.
+    If all 3 are present, rotates to the oldest of the 3 to maintain smooth cyclic rotation.
+    """
+    last_3 = existing_posts[:3]
+    analysis = []
+    cats = []
+    for i, p in enumerate(last_3):
+        cat = classify_channel_post(p)
+        cats.append(cat)
+        first_line = p.strip().split("\n")[0] if p else "Post"
+        analysis.append({"idx": i + 1, "category": cat, "headline": first_line[:75]})
+    
+    present = set(cats)
+    if "QR" not in present:
+        target = "QR"
+        reason = "QARAQALPAQSTAN (QR) is missing in the last 3 posts! Mandatory selection."
+    elif "UZ" not in present:
+        target = "UZ"
+        reason = "UZBEKISTAN (UZ) is missing in the last 3 posts! Mandatory selection."
+    elif "WORLD" not in present:
+        target = "WORLD"
+        reason = "WORLD / TECH is missing in the last 3 posts! Mandatory selection."
+    else:
+        target = cats[-1] if cats else "QR"
+        reason = f"All 3 categories present in last 3 posts. Oldest is {target}, continuing smooth rotation."
+
+    return target, analysis, reason
+
 def curate_and_write_posts(
     client: genai.Client,
     candidates: list[dict[str, Any]],
     existing_posts: list[str],
     ask_count: int,
-    target_category_hint: str = "",
+    target_category: str = "QR",
+    rotation_analysis: list[dict[str, Any]] | None = None,
+    rotation_reason: str = "",
 ) -> list[dict[str, Any]]:
     playbook = Path("TASK_INSTRUCTIONS.md").read_text(encoding="utf-8") if Path("TASK_INSTRUCTIONS.md").exists() else ""
 
-    rotation_mandate = ""
-    if target_category_hint == "world_or_tech":
-        rotation_mandate = """
-*** CRITICAL TOPIC ROTATION (WORLD / SCIENCE & TECH MANDATE) ***:
-The previous post on @qaraqalpaqshajanaliqlar covered a local/regional item.
-For this batch, you MUST select an extraordinary, high-interest WORLD or SCIENCE/TECH story (categories 'world' or 'world_tech')!
-Examples: space mission / James Webb discovery, AI / robotics milestone, unusual medical or scientific breakthrough, shocking global natural event, or high-stakes international news.
-DO NOT pick a routine local repost for this batch!
+    analysis_json = json.dumps(rotation_analysis or [], ensure_ascii=False, indent=2)
+    rotation_mandate = f"""
+*** CRITICAL 3-CATEGORY ROTATION ENGINE (QR / UZ / WORLD STRICT BALANCE) ***
+Analysis of the last 3 posts published on @qaraqalpaqshajanaliqlar:
+{analysis_json}
+
+TARGET CATEGORY FOR THIS POST: [{target_category}]
+Reason: {rotation_reason}
 """
-    elif target_category_hint == "local":
-        rotation_mandate = """
-*** CRITICAL TOPIC ROTATION (AUTHENTIC LOCAL / CITIZEN LIFE MANDATE) ***:
-The previous post on @qaraqalpaqshajanaliqlar covered world/tech news.
-For this batch, choose an authentic Karakalpakstan or Uzbekistan public/legal update (category 'karakalpakstan' or 'citizen_uzbekistan') from a primary official source (e.g. UzA, ministries, district councils).
+    if target_category == "QR":
+        rotation_mandate += """
+MANDATORY DIRECTIVE: You MUST select a high-interest news story about QARAQALPAQSTAN (category 'karakalpakstan' or stories directly concerning Nukus, Karakalpakstan districts, Joqarǵı Keńes, local infrastructure, ecology, Aral, or regional social life).
+Do NOT pick a foreign world or general Tashkent story for this run!
+"""
+    elif target_category == "UZ":
+        rotation_mandate += """
+MANDATORY DIRECTIVE: You MUST select a citizen-focused news story about UZBEKISTAN (category 'citizen_uzbekistan', covering national laws, social security, tariffs, economy, public safety, or ministries).
+Do NOT pick a foreign world story for this run!
+"""
+    else:  # WORLD
+        rotation_mandate += """
+MANDATORY DIRECTIVE: You MUST select an extraordinary WORLD or SCIENCE & TECH news story (categories 'world' or 'world_tech', covering space, AI, robotics, scientific discovery, major global events, or striking international records).
+Do NOT pick a local repost for this run!
 """
 
     prompt = f"""
@@ -1538,7 +1610,7 @@ You are the Editor-in-Chief and Doctor of Karakalpak Philology for the Telegram 
 {rotation_mandate}
 
 AUTHENTIC SOURCES ONLY — STRICT DISCOURAGEMENT OF AGGREGATORS & ZERO ADS:
-- Heavily DISCOURAGE selecting from kun.uz, KarPressa, or kknews.uz! They have been severely overused. Strongly favor primary authentic web portals, official gazettes, and international science/world wires (NASA, Nature, ScienceDaily, BBC, Reuters, Guardian, TechCrunch, UzA, etc.).
+- SOURCING INTEGRITY: Strongly favor primary authentic web portals, official Karakalpakstan media (kknews.uz, KarPressa, xaliq_ushin, joqargikenes), Uzbekistan official gazettes (UzA, gov.uz, ministries), and international science/world wires (NASA, Nature, ScienceDaily, BBC, Reuters, Guardian, TechCrunch). Disfavor repetitive generic aggregators (kun.uz).
 - ZERO ADVERTISING: Absolutely NEVER choose commercial advertisements, store discounts, product promos, or sponsored real estate announcements.
 
 {OFFICIAL_KARAKALPAK_ALPHABET_RULES}
@@ -2306,18 +2378,16 @@ def main() -> int:
         print("[DONE] No unseen stories right now.")
         return 0
 
-    # Smart Dynamic Category Alternator: 50/50 balance between World/Tech and Local Authentic
-    last_post_text = existing_posts[0] if existing_posts else ""
-    is_last_local = bool(re.search(
-        r"(?i)\b(ózbek|ozbek|qaraqalpaq|nókis|nokis|tashkent|toshkent|wálayat|walayat|hákim|hakim|ministr|respublika|samarqand|buxoro|andijon|qaraqalpaqstan|fergana|namangan|qashqadaryo|surxondaryo|jizzax|sirdaryo|navoiy|xorazm)\w*",
-        last_post_text
-    ))
-    target_hint = "world_or_tech" if is_last_local else "local"
-    print(f"      [ROTATION ENGINE] Last post was local={is_last_local} -> Target for this run: {target_hint.upper()}")
+    # 3-Category Rotation Analyzer: QR / UZ / WORLD
+    target_category, rot_analysis, rot_reason = analyze_last_3_posts_and_get_target(existing_posts)
+    print("      [ROTATION ENGINE] Last 3 posts analysis on @qaraqalpaqshajanaliqlar:")
+    for a in rot_analysis:
+        print(f"         Post #{a['idx']}: [{a['category']}] {a['headline']}")
+    print(f"      [ROTATION ENGINE] Target category for this run: {target_category} ({rot_reason})")
 
     ask_count = min(max_posts + 2, 5)
     print(f"[3/5] Curating & drafting Karakalpak Latin posts with flagship Gemini (target={max_posts}, pool={ask_count})...")
-    selected = curate_and_write_posts(client, candidates, existing_posts, ask_count, target_hint)
+    selected = curate_and_write_posts(client, candidates, existing_posts, ask_count, target_category, rot_analysis, rot_reason)
     time.sleep(1.5)
 
     print("[4/5] Proofreading captions & checking semantic duplicates against Official 34-Letter Alphabet...")
@@ -2327,16 +2397,29 @@ def main() -> int:
         print("[SKIP ALL] No posts available from Tilmoch translator. Skipping run cleanly as instructed by user.")
         return 0
 
-    # Prioritize items matching our target category
+    # Prioritize items matching our strict target category (QR, UZ, or WORLD)
     def item_pref_key(it: dict[str, Any]) -> int:
         cand_temp = resolve_candidate_for_item(it, candidates)
         if not cand_temp:
             return 99
         c_cat = cand_temp.get("category", "")
-        if target_hint == "world_or_tech":
-            return 0 if c_cat in ("world", "world_tech") else 1
-        else:
-            return 0 if c_cat in ("karakalpakstan", "citizen_uzbekistan") else 1
+        c_txt = cand_temp.get("text", "")
+        if target_category == "QR":
+            if c_cat == "karakalpakstan" or QR_CATEGORY_REGEX.search(c_txt):
+                return 0
+            elif c_cat == "citizen_uzbekistan":
+                return 1
+            return 2
+        elif target_category == "UZ":
+            if c_cat == "citizen_uzbekistan" or UZ_CATEGORY_REGEX.search(c_txt):
+                return 0
+            elif c_cat == "karakalpakstan":
+                return 1
+            return 2
+        else:  # WORLD
+            if c_cat in ("world", "world_tech"):
+                return 0
+            return 2
 
     selected.sort(key=item_pref_key)
 
