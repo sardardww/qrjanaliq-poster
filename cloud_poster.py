@@ -1768,7 +1768,7 @@ def scrape_telegram_channel(category: str, channel: str, max_age_hours: int) -> 
 
         photo_urls = []
 
-        for wrap in msg.select(".tgme_widget_message_photo_wrap"):
+        for wrap in msg.select(".tgme_widget_message_photo_wrap, .tgme_widget_message_video_thumb, i[style*='background-image']"):
 
             m = BG_URL_RE.search(wrap.get("style", ""))
 
@@ -3561,7 +3561,8 @@ CRITICAL FORMATTING INSTRUCTIONS (MAINTAIN PROFESSIONAL BALANCE — DO NOT OVERD
 
 YOUR TASK:
 
-1. Select the TOP {ask_count} completely NEW, non-duplicate, most interesting stories following the style above (mix of Karakalpakstan, Uzbekistan daily-life/legal/safety, and World/Tech).
+1. Select EXACTLY {ask_count} completely NEW, non-duplicate, most interesting stories following the style above.
+   - MANDATORY BACKUP CANDIDATES: Your JSON response array MUST contain AT LEAST 3 (ideally {ask_count}) distinct stories! Even if TARGET CATEGORY is QR, if there are only 1 or 2 QR stories available in candidates, fill the remaining slots with UZ and WORLD stories so there are ALWAYS healthy backup stories ready to publish! NEVER return an array with only 1 story!
 
    - Double-check against ALREADY PUBLISHED ON @qaraqalpaqshajanaliqlar: if a story is about the same event/law (e.g. 350 kVt electricity limit, 4-day parent school holiday leave, Nukus Chemistry Olympiad, Cannavaro, Asian Cup 2027, Swiss Ambassador at School #34, China Eastern Airlines), SKIP IT!
 
@@ -5101,7 +5102,9 @@ def main() -> int:
 
             if not photo_bytes:
 
-                print(f"[SKIP] Could not obtain clean related photo for {cand['url']}; trying backup story.")
+                print(f"[SKIP] Could not obtain clean related photo for {cand['url']}; blacklisting to prevent infinite loop & trying backup story.")
+
+                new_urls.append(normalize_url(cand["url"]))
 
                 continue
 
