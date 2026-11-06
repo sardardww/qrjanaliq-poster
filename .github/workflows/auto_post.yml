@@ -2,11 +2,11 @@ name: "@qaraqalpaqshajanaliqlar Auto News Poster (Every 10 min / 6x per hour)"
 
 on:
   schedule:
-    # Runs 6 TIMES EVERY HOUR (strictly every 10 minutes: :02, :12, :22, :32, :42, :52)
-    # 10-minute cadence keeps Render translation API warm 24/7 (never sleeps!)
-    # Between 04:00 and 00:00 Tashkent time (UTC+5)
-    # 23:02..23:52 UTC = 04:02..04:52 UZT | 00:02..19:52 UTC = 05:02..00:52 UZT
-    - cron: "2,12,22,32,42,52 0-19,23 * * *"
+    # Runs strictly every 10 minutes (:02, :12, :22, :32, :42, :52)
+    # Active only from 04:00 to 00:00 (midnight) Tashkent time (UTC+5)
+    # Quiet hours (everyone sleeping): 00:00 to 04:00 Tashkent time (19:00 to 23:00 UTC)
+    # Active UTC hours: 23 (04:00 UZT) and 0-18 (05:00 - 23:59 UZT)
+    - cron: "2,12,22,32,42,52 0-18,23 * * *"
   workflow_dispatch:
     inputs:
       max_posts:
@@ -59,8 +59,8 @@ jobs:
           MAX_POSTS: ${{ github.event.inputs.max_posts || '1' }}
         run: python cloud_poster.py
 
-      # GitHub cron is best-effort and often skips runs. Self-chain: wait until
-      # 10 minutes after this run started, then dispatch the next run.
+      # Self-chain: wait until 10 minutes after this run started, then dispatch next run.
+      # Automatically stops self-chaining when entering quiet sleep hours (00:00 - 04:00 Tashkent time).
       - name: Chain next run in 10 minutes
         if: always()
         continue-on-error: true
@@ -73,6 +73,17 @@ jobs:
             echo "Waiting ${WAIT}s to reach exactly 10-minute cadence..."
             sleep $WAIT
           fi
+
+          # Check if the next run falls into quiet sleep hours (00:00 to 04:00 Tashkent time)
+          NEXT_UZT_HOUR=$(TZ="Asia/Tashkent" date +%-H)
+          echo "Current Tashkent time: $(TZ="Asia/Tashkent" date '+%Y-%m-%d %H:%M:%S') (Hour: $NEXT_UZT_HOUR)"
+
+          if [ "$NEXT_UZT_HOUR" -lt 4 ]; then
+            echo "[QUIET SLEEP HOURS] Current Tashkent hour ($NEXT_UZT_HOUR:00) is during sleep time (00:00 - 04:00)."
+            echo "Stopping 10-minute self-chain. Scheduled cron will automatically resume at 04:00 Tashkent time."
+            exit 0
+          fi
+
           for i in 1 2 3; do
             echo "Dispatching next run (attempt $i)..."
             if gh workflow run auto_post.yml --ref main --repo ${{ github.repository }}; then
