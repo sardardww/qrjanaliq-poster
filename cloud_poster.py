@@ -913,6 +913,24 @@ AUTO_WORD_FIXES = [
     (r"\b(t|T)ezlestir([a-zıóúáǵń]*)\b", r"\1ezlet\2"),
     (r"\bintellekten paydalan([a-zıóúáǵń]*)\b", r"intellektten paydalan\1"),
     (r"\baqsha juwıw\b", "aqsha jıllaw"),
+    # New audited slips from posts #381 - #399
+    (r"\bengiziwdıń\b", "engiziwdiń"),
+    (r"\b(t|T)echnologiya([a-zıóúáǵń]*)\b", r"\1exnologiya\2"),
+    (r"\bmáselerin\b", "máselelerin"),
+    (r"\bÁstanalıq\b", "Astanalıq"),
+    (r"\bÁstana\b", "Astana"),
+    (r"\b(p|P)rocess\b", r"\1roces"),
+    (r"\bjúze keliw([a-zıóúáǵń]*)\b", r"júzege keliw\1"),
+    (r"\b(q|Q)adaǵalaw ólshemler([a-zıóúáǵń]*)\b", r"\1adaǵalaw ilajlar\2"),
+    (r"\bIshki isler uyımları\b", "Ishki isler organları"),
+    (r"\btájiriybeli sapar([a-zıóúáǵń]*)\b", r"jumıs sapar\1"),
+    (r"\bkútip barıw([a-zıóúáǵń]*)\b", r"kútip-baplaw\1"),
+    (r"\b(j|J)asıl makan\b", r"\1asıl mákan"),
+    (r"\b(u|U)lıwma milliy\b", r"\1lıwmamilliy"),
+    (r"\b(q|Q)arıydarlardıń huqıqlar([a-zıóúáǵń]*)\b", r"\1utınıwshılardıń huqıqlar\2"),
+    (r"\b(q|Q)ádemler taslamaqta\b", r"ilajlar kórmekte"),
+    (r"\bqupıya orın([a-zıóúáǵń]*)\b", r"jasırın orın\1"),
+    (r"\bǵalabalıq sport([a-zıóúáǵń]*)\b", r"ǵalaba sport\1"),
 ]
 
 
