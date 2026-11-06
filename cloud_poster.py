@@ -4107,6 +4107,69 @@ def is_text_duplicate_of_existing(visible_text: str, existing_texts: list[str]) 
 
 
 
+
+def repair_rogue_capital_i(text: str) -> str:
+    """
+    Bulletproof defense: Repairs stray capital 'I' letters introduced by upstream translation APIs.
+    - Preserves standard acronyms: IIV, IIO, AQSh, BMSh, GFR, ÓzA, etc.
+    - Preserves valid word-initial 'I': Isa, Ilim, Iras, etc.
+    - Converts mid/end-word 'I' to 'ı' (back vowel words) or 'i' (front vowel words).
+    """
+    FRONT_VOWELS = set('eióúáEÍÓÚÁ')
+    BACK_VOWELS = set('aouıAOUÍ')
+
+    def fix_word(match):
+        word = match.group(0)
+        if word.isupper() and len(word) <= 5:
+            return word
+        if 'I' not in word:
+            return word
+
+        has_front = any(ch in FRONT_VOWELS for ch in word.replace('I', ''))
+        has_back = any(ch in BACK_VOWELS for ch in word.replace('I', ''))
+
+        if has_front and not has_back:
+            safe_vowel = 'i'
+        elif has_back and not has_front:
+            safe_vowel = 'ı'
+        else:
+            safe_vowel = None
+
+        chars = list(word)
+        for idx, ch in enumerate(chars):
+            if ch == 'I':
+                if idx == 0 and len(chars) > 1 and chars[1].islower():
+                    continue
+                target_v = safe_vowel
+                if not target_v:
+                    prev_v = None
+                    for b_idx in range(idx - 1, -1, -1):
+                        if chars[b_idx].lower() in 'eióúá':
+                            prev_v = 'i'; break
+                        elif chars[b_idx].lower() in 'aouı':
+                            prev_v = 'ı'; break
+                    next_v = None
+                    for f_idx in range(idx + 1, len(chars)):
+                        if chars[f_idx].lower() in 'eióúá':
+                            next_v = 'i'; break
+                        elif chars[f_idx].lower() in 'aouı':
+                            next_v = 'ı'; break
+                    target_v = prev_v or next_v or 'ı'
+                chars[idx] = target_v
+
+        return "".join(chars)
+
+    parts = re.split(r"(<[^>]+>)", text)
+    out = []
+    for part in parts:
+        if part.startswith("<") and part.endswith(">"):
+            out.append(part)
+        else:
+            repaired = re.sub(r"[a-zA-ZáóúıǵńÁÓÚIǴŃ]+", fix_word, part)
+            out.append(repaired)
+    return "".join(out)
+
+
 def transliterate_and_fix_outside_tags(html_text: str) -> str:
 
     """Convert any stray Cyrillic/Turkish chars and common lexical slips outside HTML tags."""
@@ -4131,7 +4194,8 @@ def transliterate_and_fix_outside_tags(html_text: str) -> str:
 
             out.append(converted)
 
-    return "".join(out)
+    joined = "".join(out)
+    return repair_rogue_capital_i(joined)
 
 
 
