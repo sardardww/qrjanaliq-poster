@@ -3289,6 +3289,53 @@ def analyze_last_3_posts_and_get_target(existing_posts: list[str]) -> tuple[str,
 
 
 
+
+def extract_json_safely(raw: str) -> list[dict[str, Any]]:
+    """Robustly parse JSON array or objects from LLM response, with auto-repair for missing commas or markdown."""
+    raw = (raw or "").strip()
+    if raw.startswith("```"):
+        raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.DOTALL).strip()
+    
+    # 1. Try standard json.loads
+    try:
+        parsed = json.loads(raw)
+        if isinstance(parsed, dict):
+            for v in parsed.values():
+                if isinstance(v, list):
+                    return v
+            return [parsed]
+        elif isinstance(parsed, list):
+            return parsed
+    except Exception:
+        pass
+
+    # 2. Try regex extraction of outermost [ ... ]
+    m = re.search(r'\[\s*\{.*\}\s*\]', raw, re.DOTALL)
+    if m:
+        try:
+            cleaned = re.sub(r',\s*([\]\}])', r'\1', m.group(0))
+            parsed = json.loads(cleaned)
+            if isinstance(parsed, list):
+                return parsed
+        except Exception:
+            pass
+
+    # 3. Try parsing individual JSON objects { ... }
+    objs = []
+    for match in re.finditer(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', raw, re.DOTALL):
+        try:
+            cleaned = re.sub(r',\s*([\]\}])', r'\1', match.group(0))
+            obj = json.loads(cleaned)
+            if isinstance(obj, dict) and ("headline_ru" in obj or "paragraph1_ru" in obj or "caption_html" in obj or "candidate_idx" in obj):
+                objs.append(obj)
+        except Exception:
+            continue
+    if objs:
+        return objs
+
+    print("[WARN] extract_json_safely: Failed to parse LLM response. Snippet:", raw[:250])
+    return []
+
 def curate_and_write_posts(
 
     client: genai.Client,
@@ -3571,26 +3618,7 @@ Return ONLY a JSON array of objects with keys:
     )
 
     raw = (resp.text or "").strip()
-
-    if raw.startswith("```"):
-
-        raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.DOTALL).strip()
-
-    parsed = json.loads(raw)
-
-    if isinstance(parsed, dict):
-
-        for v in parsed.values():
-
-            if isinstance(v, list):
-
-                parsed = v
-
-                break
-
-        else:
-
-            parsed = [parsed]
+    parsed = extract_json_safely(raw)
 
 
 
@@ -4939,7 +4967,7 @@ def main() -> int:
 
 
 
-    ask_count = min(max_posts + 2, 5)
+    ask_count = max(max_posts + 2, 4)
 
     print(f"[3/5] Curating & drafting Karakalpak Latin posts with flagship Gemini (target={max_posts}, pool={ask_count})...")
 
