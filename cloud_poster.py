@@ -840,6 +840,28 @@ AUTO_WORD_FIXES = [
 
     (r"\bjas basqan adamlard([ıi])\b", "kekselerdi"),
 
+    # Critical audited slips from posts 290-294
+    (r"\b(t|T)ınıq toq[ıi]malar\b", r"\1iri toqımalar"),
+    (r"\bJabıńqı\b", "Qaplama"),
+    (r"\bjabıńqı\b", "qaplama"),
+    (r"\bkletqa([a-zıóúáǵń]*)\b", r"kletka\1"),
+    (r"\bKletqa([a-zıóúáǵń]*)\b", r"Kletka\1"),
+    (r"\bkútik([a-zıóúáǵń]*)\b", r"kúyik\1"),
+    (r"\bKútik([a-zıóúáǵń]*)\b", r"Kúyik\1"),
+    (r"\bdıyqan([a-zıóúáǵń]*)\b", r"diyqan\1"),
+    (r"\bDıyqan([a-zıóúáǵń]*)\b", r"Diyqan\1"),
+    (r"\btaldap shıǵ([a-zıóúáǵń]*)\b", r"tallap shıǵ\1"),
+    (r"\bTaldap shıǵ([a-zıóúáǵń]*)\b", r"Tallap shıǵ\1"),
+    (r"\bshıń saatlar([a-zıóúáǵń]*)\b", r"eń tıǵız saatlar\1"),
+    (r"\bShıń saatlar([a-zıóúáǵń]*)\b", r"Eń tıǵız saatlar\1"),
+    (r"\b([A-Za-zÁáÓóÚúǴǵŃńıI]+)lerinin'\b", r"\1leriniń"),
+    (r"\btarix\b", "tariyx"),
+    (r"\bTarix\b", "Tariyx"),
+    (r"\bashildi\b", "ashıldı"),
+    (r"\bAshildi\b", "Ashıldı"),
+    (r"\bzıyanlan([a-zıóúáǵń]*)\b", r"zaqımlan\1"),
+    (r"\bZıyanlan([a-zıóúáǵń]*)\b", r"Zaqımlan\1"),
+    (r"\bbarlıǵı tórt saat\b", "barı-joǵı tórt saat"),
 ]
 
 
@@ -1668,12 +1690,6 @@ def scrape_telegram_channel(category: str, channel: str, max_age_hours: int) -> 
 
         text = txt_el.get_text("\n", strip=True)
 
-        if len(text) < 60:
-
-            continue
-
-
-
         external_links = []
 
         for a_tag in txt_el.select("a[href]"):
@@ -1691,6 +1707,11 @@ def scrape_telegram_channel(category: str, channel: str, max_age_hours: int) -> 
             ):
 
                 external_links.append(href)
+
+        # Minimum substantive text threshold: 1-line stubs or bare hashtags without an external article have insufficient facts and cause AI hallucinations
+        if len(text) < 110 and not external_links:
+
+            continue
 
 
 
@@ -3431,7 +3452,12 @@ CRITICAL FORMATTING INSTRUCTIONS (MAINTAIN PROFESSIONAL BALANCE — DO NOT OVERD
 
 👉 <a href="https://t.me/+ccz2kfdc8Fg1ZGYy">Qaraqalpaqsha jańalıqlar — aǵza bolıw</a>
 
-7. LENGTH: Visible Russian text between 450 and 800 characters.
+7. STRICT ZERO HALLUCINATION MANDATE (ABSOLUTE TRUTH & GROUNDING):
+   - You must NEVER invent or hallucinate statements, quotes, official reactions ("представители ведомства сообщили", "dep málim etti basqarma wákilleri", "мутасаддилар билдирди"), reasons ("это стало возможным благодаря труду дехкан"), or background facts that DO NOT exist in the candidate's text!
+   - Every single claim, quote, number, name, and cause MUST be 100% grounded in the candidate's provided text.
+   - If a source candidate text is short, KEEP THE POST SHORT AND 100% FACTUAL! DO NOT artificially pad, fluff, or invent stories to inflate character count.
+   - Factual truth and accuracy STRICTLY override length! A truthful 250-character post is infinitely better than a 500-character post with invented official statements.
+   - Typical length: between 300 and 700 characters (or shorter if the original source is brief).
 
 
 
@@ -3447,8 +3473,10 @@ YOUR TASK:
 
 
 
-STRICT CONTENT BAN:
+STRICT FACTUAL INTEGRITY & CONTENT BAN:
 
+- ABSOLUTE ZERO HALLUCINATION: You are FORBIDDEN from inventing facts, statistics, reasons, or quotes from officials/spokespeople that do not exist in the candidate text.
+- DO NOT select candidates that are mere stubs or 1-line video tags lacking factual substance (less than ~100 chars of actual facts), because they lack sufficient information to write an accurate, non-hallucinated post.
 - NEVER select or write about rape, sexual violence, sexual assault, pedophilia, or sexual crimes! (Military wars, armed conflicts, and accidents are allowed, but ALL sexual violence/rape is STRICTLY FORBIDDEN).
 
 
@@ -3729,7 +3757,10 @@ INSTRUCTIONS FOR EACH ITEM:
 
 1. "is_duplicate": set to true if the story covers the SAME event, law, incident, or topic already in ALREADY PUBLISHED.
 
-2. "linguistic_audit" (MANDATORY CHAIN-OF-THOUGHT):
+2. "fact_and_grounding_audit":
+   Check if the text contains any fabricated official claims or padding (e.g. "dep málim etti basqarma wákilleri", "arqasında múmkin boldı") that were not substantiated by facts. Strip out invented quotes or fluff!
+
+3. "linguistic_audit" (MANDATORY CHAIN-OF-THOUGHT):
 
    Scan the caption word-by-word. You MUST check:
 
