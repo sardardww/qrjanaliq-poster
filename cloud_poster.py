@@ -84,6 +84,33 @@ CYRILLIC_RE = re.compile(r"[\u0400-\u04FF]")
 
 BG_URL_RE = re.compile(r"background-image:url\('([^']+)'\)")
 
+NICHE_ESOTERIC_TOPIC_RE = re.compile(
+    r"\b("
+    r"метеорн(?:ый|ого|ом|ые|ых|ому)|"
+    r"звездопад\w*|"
+    r"метеоритн(?:ый|ого|ые)\s+дожд|"
+    r"леонид\w*|"
+    r"персеид\w*|"
+    r"геминид\w*|"
+    r"лирид\w*|"
+    r"астероид\s+(?:пролетит|сблизится)|"
+    r"комет[аые]\s+[0-9]+[A-Za-z]|"
+    r"звездн(?:ое|ого)\s+неб[оа]|"
+    r"астрономическ(?:ие|их)\s+наблюден|"
+    r"meteor\s+shower|"
+    r"leonids?|"
+    r"perseids?|"
+    r"drobny[ye]\s+zaryad|"
+    r"kvantov(?:aya|oy)\s+zaputannost|"
+    r"mikrobiom\s+myshey|"
+    r"genom\s+mukh|"
+    r"iskopayem(?:yye|ogo)\s+mollyusk|"
+    r"paleontolog\w*\s+opisali"
+    r")\b",
+    re.IGNORECASE
+)
+
+
 
 
 OFFICIAL_KARAKALPAK_ALPHABET_RULES = """
@@ -3431,7 +3458,7 @@ def curate_and_write_posts(
 The channel @qaraqalpaqshajanaliqlar REQUIRES a continuous, balanced mix of:
 1. QARAQALPAQSTAN (QR): Exclusive, primary-source Karakalpakstan news (from district administrations/akimiyats, Joqarg'i Kenes, ministries, agencies, xaliq_ushin). Sourcing rule: Do NOT choose from generic news aggregators (kknews, KarPressa, karinform)! Choose EXCLUSIVELY from official government systems, district akimiyats, state agencies, or official state journalism (@xaliq_ushin).
 2. O'ZBEKISTON (UZ): Citizen-focused national news covering national laws, salaries, pensions, utilities/tariffs, education, transport, economy (category 'citizen_uzbekistan').
-3. DUNYO & ILM-FAN (WORLD): World events, space exploration, scientific breakthroughs, AI, robotics, striking global achievements (categories 'world' or 'world_tech').
+3. DUNYO & ILM-FAN (WORLD): High-impact world events, shocking incidents, viral phenomena, consumer AI (ChatGPT, humanoid robots), smartphones, Tesla/self-driving cars, massive rocket launches (SpaceX Starship), and extreme visual engineering (e.g. 1200°C heat tiles touched with bare hands). STRICTLY NO minor astronomy/meteor showers or obscure academic microbiology/physics!
 
 MANDATORY DIRECTIVE: You MUST draft posts across ALL THREE categories!
 Your output list of {ask_count} items MUST contain:
@@ -3604,6 +3631,10 @@ STRICT FACTUAL INTEGRITY & CONTENT BAN:
 - ABSOLUTE ZERO HALLUCINATION: You are FORBIDDEN from inventing facts, statistics, reasons, or quotes from officials/spokespeople that do not exist in the candidate text.
 - DO NOT select candidates that are mere stubs or 1-line video tags lacking factual substance (less than ~100 chars of actual facts), because they lack sufficient information to write an accurate, non-hallucinated post.
 - NEVER select or write about rape, sexual violence, sexual assault, pedophilia, or sexual crimes! (Military wars, armed conflicts, and accidents are allowed, but ALL sexual violence/rape is STRICTLY FORBIDDEN).
+- STRICT BAN ON NICHE / DEEP SPECIALIZED ACADEMIC & ASTRONOMY TOPICS:
+  * Absolutely NEVER select routine astronomy or amateur stargazing: meteor showers (Leonids, Perseids, Geminids, Lyrid meteor streams, "звездопад", "метеорный поток"), minor comet designations (55P/Tempel-Tuttle, etc.), routine asteroid passings, planetary alignments, or night-sky viewing calendars. The channel audience consists of general public readers, NOT professional astronomers!
+  * Absolutely NEVER select narrow, esoteric laboratory micro-research: experiments on mice/rats, fruit fly genetics, cellular microbiology, abstract theoretical physics, quantum equations, or obscure fossil descriptions that only a narrow academic specialist would care about.
+  * Science and tech MUST be globally impactful, viral, visually astonishing, or directly useful to everyday people (e.g., consumer AI products like ChatGPT, humanoid robots, Tesla/self-driving cars, smartphones, life-saving medical treatments, massive rocket launches like SpaceX Starship, extreme physical engineering demos). If a story requires a university degree in astrophysics or molecular biology to find interesting, REJECT IT IMMEDIATELY!
 
 
 
@@ -5123,6 +5154,7 @@ def main() -> int:
         and normalize_url(c.get("fallback_post_url", "")) not in seen_urls
 
         and not any(normalize_url(ext) in seen_urls for ext in c.get("external_links", []))
+        and not NICHE_ESOTERIC_TOPIC_RE.search((c.get("text") or "") + " " + (c.get("url") or ""))
 
     ]
 
