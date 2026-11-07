@@ -4287,6 +4287,44 @@ def sanitize_and_validate_caption(caption: str) -> str | None:
 # ======================================================================================
 
 FORBIDDEN_ROOTS_CHECK = [
+    # Anti-Uzbekism & High Frequency News Fixes
+    (r"\bhosil\b", "ónim"),
+    (r"\byutug['’‘`]?i\b", "tabısı"),
+    (r"\byutuq\b", "tabıs"),
+    (r"\bloyih?a\b", "joybar"),
+    (r"\btadbir\b", "ilaj"),
+    (r"\btadbirkor\b", "isbilermen"),
+    (r"\biqtisodiyot\b", "ekonomika"),
+    (r"\biqtisodiy\b", "ekonomikalıq"),
+    (r"\b(t|T)ibbiyot\b", "medicina"),
+    (r"\b(t|T)ibbiyotta\b", "medicinada"),
+    (r"\b(t|T)ibbiy\b", "medicinalıq"),
+    (r"\bkeseliklerge\b", "keselliklerge"),
+    (r"\bkeselik\b", "kesellik"),
+    (r"\bnatija\b", "nátiyje"),
+    (r"\bfuqaro\b", "puqara"),
+    (r"\bpuxara\b", "puqara"),
+    (r"\btunda\b", "túnde"),
+    (r"\bkecha\b", "keshe"),
+    (r"\bertaga\b", "erteń"),
+    (r"\byordam\b", "járdem"),
+    (r"\bshuningdek\b", "sonday-aq"),
+    (r"\bmasala\b", "másele"),
+    (r"\bqaror\b", "qarar"),
+    (r"\bhukumat\b", "húkimet"),
+    (r"\bshifokor\b", "shıpaker"),
+    (r"\bkasalxona\b", "emlewxana"),
+    (r"\bdorixona\b", "dárixana"),
+    (r"\bqurilish\b", "qurılıs"),
+    (r"\bta['’‘`]?lim\b", "bilimlendiriw"),
+    (r"\bjarima\b", "járiyma"),
+    (r"\bmatbuot xizmati\b", "málimleme xızmeti"),
+    (r"\bqollanǵan\b", "paydalanǵan"),
+    (r"\bqollanıp\b", "paydalanıp"),
+    (r"\bkómeklesetuǵının\b", "járdem beretuǵının"),
+    (r"\bsherik-tiykarlawshısı\b", "tiykarshılarınıń biri"),
+    (r"\burlaw\b", "urlıq qılıw"),
+
 
     (r"\bjamoat\b", "jámiyetlik"),
 
@@ -5058,7 +5096,7 @@ def main() -> int:
 
 
 
-    bot_token, chat_id, gemini_key, max_posts = load_config()
+    bot_token, chat_id, gemini_key, max_posts, admin_chat_id, auto_publish = load_config()
 
     client = genai.Client(api_key=gemini_key)
 
@@ -5244,7 +5282,18 @@ def main() -> int:
 
             print(f"[MEDIA] Found video for {cand['url']}, trying to post video...")
 
-            res = send_telegram_video(bot_token, chat_id, video_urls[0], caption)
+            target_send_chat = chat_id if auto_publish else admin_chat_id
+        moderation_markup = None
+        if not auto_publish:
+            moderation_markup = {
+                "inline_keyboard": [
+                    [
+                        {"text": "🚀 Kanalǵa shıǵarıw", "callback_data": "pub"},
+                        {"text": "❌ Biykar etiw", "callback_data": "del"}
+                    ]
+                ]
+            }
+        res = send_telegram_video(bot_token, target_send_chat, video_urls[0], caption, reply_markup=moderation_markup)
 
             if not res or not res.get("ok"):
 
@@ -5279,7 +5328,18 @@ def main() -> int:
                 new_urls.append(normalize_url(cand["url"]))
                 continue
 
-            res = send_telegram_photo(bot_token, chat_id, photo_bytes, caption)
+            target_send_chat = chat_id if auto_publish else admin_chat_id
+            moderation_markup = None
+            if not auto_publish:
+                moderation_markup = {
+                    "inline_keyboard": [
+                        [
+                            {"text": "🚀 Kanalǵa shıǵarıw", "callback_data": "pub"},
+                            {"text": "❌ Biykar etiw", "callback_data": "del"}
+                        ]
+                    ]
+                }
+            res = send_telegram_photo(bot_token, target_send_chat, photo_bytes, caption, reply_markup=moderation_markup)
 
         if res.get("ok"):
 
