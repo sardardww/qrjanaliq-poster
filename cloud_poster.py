@@ -1558,43 +1558,26 @@ def normalize_url(u: str) -> str:
 
 
 
-def load_config() -> tuple[str, str, str, int]:
-
+def load_config() -> tuple[str, str, str, int, str, bool]:
     bot_token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
-
     chat_id = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
-
     gemini_key = os.environ.get("GEMINI_API_KEY", "").strip()
-
     max_posts = int(os.environ.get("MAX_POSTS", "1"))
-
-
+    admin_chat_id = os.environ.get("ADMIN_CHAT_ID", "5649102659").strip()
+    auto_publish = os.environ.get("AUTO_PUBLISH_TO_CHANNEL", "false").lower() in ("true", "1", "yes")
 
     local_cfg = Path("telegram_config.json")
-
     if (not bot_token or not chat_id) and local_cfg.exists():
-
         data = json.loads(local_cfg.read_text(encoding="utf-8"))
-
         bot_token = bot_token or data.get("bot_token", "")
-
         chat_id = chat_id or data.get("chat_id") or data.get("channel_id", "")
-
-
+        admin_chat_id = admin_chat_id or data.get("admin_chat_id", "5649102659")
 
     if not bot_token or not chat_id:
-
         raise RuntimeError("Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID.")
-
     if not gemini_key:
-
         raise RuntimeError("Missing GEMINI_API_KEY secret.")
-
-    return bot_token, chat_id, gemini_key, max(1, min(max_posts, 4))
-
-
-
-
+    return bot_token, chat_id, gemini_key, max(1, min(max_posts, 4)), admin_chat_id, auto_publish
 
 def http_get(url: str, timeout: int = 20) -> requests.Response | None:
 
@@ -4965,43 +4948,22 @@ def extract_frame_from_video(video_url: str = "", video_bytes: bytes | None = No
 
     return None
 
-def send_telegram_video(bot_token: str, chat_id: str, video_url: str, caption_html: str) -> dict[str, Any]:
-
+def send_telegram_video(bot_token: str, chat_id: str, video_url: str, caption_html: str, reply_markup: dict[str, Any] | None = None) -> dict[str, Any]:
     url = f"https://api.telegram.org/bot{bot_token}/sendVideo"
-
+    data_payload = {
+        "chat_id": chat_id,
+        "parse_mode": "HTML",
+        "caption": caption_html,
+        "video": video_url,
+    }
+    if reply_markup:
+        data_payload["reply_markup"] = json.dumps(reply_markup)
     try:
-
-        # First try passing direct URL to Telegram Bot API
-
-        resp = requests.post(
-
-            url,
-
-            data={
-
-                "chat_id": chat_id,
-
-                "parse_mode": "HTML",
-
-                "caption": caption_html,
-
-                "video": video_url,
-
-            },
-
-            timeout=40,
-
-        )
-
+        resp = requests.post(url, data=data_payload, timeout=40)
         data = resp.json()
-
         if data.get("ok"):
-
             return data
-
         
-
-        # Fallback: stream download and upload with size safety & supports_streaming
         v_resp = requests.get(video_url, stream=True, timeout=25, headers={"User-Agent": "Mozilla/5.0"})
         if v_resp.status_code == 200:
             cl = int(v_resp.headers.get("content-length", 0))
@@ -5018,58 +4980,41 @@ def send_telegram_video(bot_token: str, chat_id: str, video_url: str, caption_ht
                 chunks.append(chunk)
             v_bytes = b"".join(chunks)
             if len(v_bytes) > 10000:
+                post_data = {
+                    "chat_id": chat_id,
+                    "parse_mode": "HTML",
+                    "caption": caption_html,
+                    "supports_streaming": True,
+                }
+                if reply_markup:
+                    post_data["reply_markup"] = json.dumps(reply_markup)
                 resp2 = requests.post(
                     url,
-                    data={
-                        "chat_id": chat_id,
-                        "parse_mode": "HTML",
-                        "caption": caption_html,
-                        "supports_streaming": True,
-                    },
+                    data=post_data,
                     files={"video": ("news.mp4", v_bytes, "video/mp4")},
                     timeout=90,
                 )
                 return resp2.json()
-
     except Exception as exc:
-
         print(f"[WARN] send_telegram_video exception: {exc}")
-
     return {"ok": False}
 
-
-
-
-
-def send_telegram_photo(bot_token: str, chat_id: str, photo_bytes: bytes, caption_html: str) -> dict[str, Any]:
-
+def send_telegram_photo(bot_token: str, chat_id: str, photo_bytes: bytes, caption_html: str, reply_markup: dict[str, Any] | None = None) -> dict[str, Any]:
     url = f"https://api.telegram.org/bot{bot_token}/sendPhoto"
-
+    data = {
+        "chat_id": chat_id,
+        "parse_mode": "HTML",
+        "caption": caption_html,
+    }
+    if reply_markup:
+        data["reply_markup"] = json.dumps(reply_markup)
     resp = requests.post(
-
         url,
-
-        data={
-
-            "chat_id": chat_id,
-
-            "parse_mode": "HTML",
-
-            "caption": caption_html,
-
-        },
-
+        data=data,
         files={"photo": ("news.jpg", photo_bytes, "image/jpeg")},
-
         timeout=30,
-
     )
-
     return resp.json()
-
-
-
-
 
 def is_within_active_posting_hours() -> bool:
 
