@@ -1723,6 +1723,15 @@ def fetch_existing_channel_posts() -> tuple[list[str], set[str]]:
 
 
 
+    # Also sync seen/blacklisted URLs from Render Moderation Queue
+    try:
+        r_seen = requests.get("https://karakalpak-translator-api.onrender.com/drafts/seen_urls", timeout=8)
+        if r_seen.status_code == 200:
+            for u in r_seen.json().get("urls", []):
+                seen_urls.add(normalize_url(u))
+    except Exception:
+        pass
+
     return deduped_summaries[-45:], seen_urls
 
 
@@ -5092,7 +5101,28 @@ def main() -> int:
 
     ensure_render_service_warm(max_wait_seconds=45)
 
+    # Check Moderation Queue status on Render to maintain steady 4-post buffer
+    queue_status = {"pending_in_queue": 0, "has_active_waiting_admin": False}
+    try:
+        r_stat = requests.get("https://karakalpak-translator-api.onrender.com/drafts/status", timeout=10)
+        if r_stat.status_code == 200:
+            queue_status = r_stat.json()
+    except Exception as exc:
+        print(f"[WARN] Could not check Render queue status: {exc}")
 
+    pending_in_q = queue_status.get("pending_in_queue", 0)
+    has_active = 1 if queue_status.get("has_active_waiting_admin") else 0
+    total_waiting = pending_in_q + has_active
+
+    # Target queue buffer: 4 posts ready (so 1 hour absence = 4 posts ready to review 1-by-1)
+    target_buffer = 4
+    if total_waiting >= target_buffer:
+        print(f"[QUEUE BUFFER FULL] Moderation queue already has {total_waiting} posts waiting ({has_active} active + {pending_in_q} pending). Target buffer is {target_buffer}.")
+        print("                    Skipping drafting this run to prevent backlog.")
+        return 0
+
+    posts_to_generate = max(1, min(target_buffer - total_waiting, max_posts if max_posts > 1 else 3))
+    print(f"[QUEUE STATUS] Active waiting: {has_active}, Pending in queue: {pending_in_q}. Target to generate: {posts_to_generate} post(s).")
 
     print("[1/5] Checking @qaraqalpaqshajanaliqlar live feed for deduplication...")
 
@@ -5156,9 +5186,9 @@ def main() -> int:
 
 
 
-    ask_count = max(max_posts + 2, 4)
+    ask_count = max(posts_to_generate + 3, 6)
 
-    print(f"[3/5] Curating & drafting Karakalpak Latin posts with flagship Gemini (target={max_posts}, pool={ask_count})...")
+    print(f"[3/5] Curating & drafting Karakalpak Latin posts with flagship Gemini (target={posts_to_generate}, pool={ask_count})...")
 
     selected = curate_and_write_posts(client, candidates, existing_posts, ask_count, target_category, rot_analysis, rot_reason)
 
@@ -5224,7 +5254,7 @@ def main() -> int:
 
     for item in selected:
 
-        if published_count >= max_posts:
+        if published_count >= posts_to_generate:
 
             break
 
