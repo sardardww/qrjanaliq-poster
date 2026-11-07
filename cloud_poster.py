@@ -1832,22 +1832,9 @@ def scrape_telegram_channel(category: str, channel: str, max_age_hours: int) -> 
 
 
 
-        photo_urls = []
-
-        for wrap in msg.select(".tgme_widget_message_photo_wrap, .tgme_widget_message_video_thumb, i[style*='background-image']"):
-
-            m = BG_URL_RE.search(wrap.get("style", ""))
-
-            if m and m.group(1) not in photo_urls:
-
-                photo_urls.append(m.group(1))
-
-
-
         video_urls = []
 
         for v_el in msg.select("video.tgme_widget_message_video, video, .tgme_widget_message_roundvideo, .tgme_widget_message_video_player video"):
-
             src = v_el.get("src", "").strip()
             if not src:
                 for s_el in v_el.select("source"):
@@ -1855,17 +1842,30 @@ def scrape_telegram_channel(category: str, channel: str, max_age_hours: int) -> 
                     if s_src:
                         src = s_src
                         break
-
             if src and src.startswith("http") and src not in video_urls:
-
                 video_urls.append(src)
 
-        for v_wrap in msg.select(".tgme_widget_message_video_player .tgme_widget_message_video_thumb"):
+        # If post has a video player but video tag wasn't inlined, fetch embed page
+        if not video_urls and msg.select(".tgme_widget_message_video_player"):
+            post_data_id = msg.get("data-post") or ""
+            if post_data_id:
+                try:
+                    embed_resp = http_get(f"https://t.me/{post_data_id}?embed=1")
+                    if embed_resp and embed_resp.text:
+                        esoup = BeautifulSoup(embed_resp.text, "html.parser")
+                        for ev in esoup.select("video"):
+                            esrc = ev.get("src", "").strip()
+                            if esrc and esrc.startswith("http") and esrc not in video_urls:
+                                video_urls.append(esrc)
+                except Exception:
+                    pass
 
-            m = BG_URL_RE.search(v_wrap.get("style", ""))
-
+        photo_urls = []
+        for wrap in msg.select(".tgme_widget_message_photo_wrap, i[style*='background-image']"):
+            if "tgme_widget_message_video_thumb" in wrap.get("class", []):
+                continue
+            m = BG_URL_RE.search(wrap.get("style", ""))
             if m and m.group(1) not in photo_urls:
-
                 photo_urls.append(m.group(1))
 
 
@@ -4853,7 +4853,7 @@ def get_clean_photo_for_post(
 
         resp = http_get(img_url)
 
-        if not resp or len(resp.content) < 5500:
+        if not resp or len(resp.content) < 15000:
 
             continue
 
@@ -4861,11 +4861,14 @@ def get_clean_photo_for_post(
 
             with Image.open(io.BytesIO(resp.content)) as im:
 
+                if im.width < 500 or im.height < 350:
+                    continue
+
                 rgb = im.convert("RGB")
 
                 buf = io.BytesIO()
 
-                rgb.save(buf, format="JPEG", quality=90)
+                rgb.save(buf, format="JPEG", quality=92)
 
                 jpg_bytes = buf.getvalue()
 
@@ -4966,51 +4969,43 @@ def enqueue_draft_to_render(
 
 def send_telegram_video(bot_token: str, chat_id: str, video_url: str, caption_html: str, reply_markup: dict[str, Any] | None = None) -> dict[str, Any]:
     url = f"https://api.telegram.org/bot{bot_token}/sendVideo"
-    data_payload = {
-        "chat_id": chat_id,
-        "parse_mode": "HTML",
-        "caption": caption_html,
-        "video": video_url,
-    }
-    if reply_markup:
-        data_payload["reply_markup"] = json.dumps(reply_markup)
     try:
-        resp = requests.post(url, data=data_payload, timeout=40)
-        data = resp.json()
-        if data.get("ok"):
-            return data
-        
-        v_resp = requests.get(video_url, stream=True, timeout=25, headers={"User-Agent": "Mozilla/5.0"})
+        # Download actual video bytes directly with streaming
+        v_resp = requests.get(video_url, stream=True, timeout=30, headers={"User-Agent": USER_AGENT})
         if v_resp.status_code == 200:
             cl = int(v_resp.headers.get("content-length", 0))
             if cl > 50 * 1024 * 1024:
-                print(f"[WARN] Video too large ({cl} bytes), falling back to photo.")
+                print(f"[WARN] Video too large ({cl} bytes > 50MB), cannot upload directly via bot API.")
                 return {"ok": False}
             chunks = []
             total = 0
             for chunk in v_resp.iter_content(chunk_size=1024 * 1024):
                 total += len(chunk)
                 if total > 50 * 1024 * 1024:
-                    print(f"[WARN] Video exceeded 50MB during download, falling back to photo.")
+                    print(f"[WARN] Video exceeded 50MB during download, skipping.")
                     return {"ok": False}
                 chunks.append(chunk)
             v_bytes = b"".join(chunks)
-            if len(v_bytes) > 10000:
+            if len(v_bytes) > 5000:
                 post_data = {
                     "chat_id": chat_id,
                     "parse_mode": "HTML",
                     "caption": caption_html,
-                    "supports_streaming": True,
+                    "supports_streaming": "true",
                 }
                 if reply_markup:
                     post_data["reply_markup"] = json.dumps(reply_markup)
-                resp2 = requests.post(
+                resp = requests.post(
                     url,
                     data=post_data,
-                    files={"video": ("news.mp4", v_bytes, "video/mp4")},
-                    timeout=90,
+                    files={"video": ("news_video.mp4", v_bytes, "video/mp4")},
+                    timeout=120,
                 )
-                return resp2.json()
+                res_data = resp.json()
+                if res_data.get("ok"):
+                    return res_data
+                else:
+                    print(f"[WARN] Telegram sendVideo error: {res_data}")
     except Exception as exc:
         print(f"[WARN] send_telegram_video exception: {exc}")
     return {"ok": False}
@@ -5317,22 +5312,29 @@ def main() -> int:
                 ]
             }
             fb_res = None
-            if photo_bytes:
-                fb_res = send_telegram_photo(
-                    bot_token=bot_token,
-                    chat_id=mod_chat_id,
-                    photo_bytes=photo_bytes,
-                    caption_html=caption,
-                    reply_markup=mod_markup
-                )
-            elif video_urls:
-                fb_res = send_telegram_video(
-                    bot_token=bot_token,
-                    chat_id=mod_chat_id,
-                    video_url=video_urls[0],
-                    caption_html=caption,
-                    reply_markup=mod_markup
-                )
+            if video_urls:
+                for v_url in video_urls:
+                    print(f"[MEDIA] Prioritizing actual video upload for post: {v_url[:60]}...")
+                    fb_res = send_telegram_video(
+                        bot_token=bot_token,
+                        chat_id=mod_chat_id,
+                        video_url=v_url,
+                        caption_html=caption,
+                        reply_markup=mod_markup
+                    )
+                    if fb_res and fb_res.get("ok"):
+                        print("[MEDIA] Actual HD video successfully delivered to moderation channel!")
+                        break
+            if not fb_res or not fb_res.get("ok"):
+                if photo_bytes:
+                    print("[MEDIA] Delivering high-res photo fallback...")
+                    fb_res = send_telegram_photo(
+                        bot_token=bot_token,
+                        chat_id=mod_chat_id,
+                        photo_bytes=photo_bytes,
+                        caption_html=caption,
+                        reply_markup=mod_markup
+                    )
             if fb_res and fb_res.get("ok"):
                 print("[DIRECT DELIVERED] Post successfully delivered directly to moderation channel!")
                 published_count += 1
