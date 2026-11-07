@@ -5306,7 +5306,43 @@ def main() -> int:
             new_titles.append(BeautifulSoup(caption, "html.parser").get_text(" ", strip=True)[:350])
             time.sleep(2)
         else:
-            print(f"[WARN] enqueue_draft_to_render failed or skipped: {q_res}. Draft will be retried on next scheduled run.")
+            print(f"[FALLBACK] Render moderation queue returned: {q_res}. Delivering DIRECTLY to moderation channel (-1003941073968)...")
+            mod_chat_id = "-1003941073968"
+            mod_markup = {
+                "inline_keyboard": [
+                    [
+                        {"text": "🚀 Kanalǵa shıǵarıw", "callback_data": f"pub:{int(time.time())}"},
+                        {"text": "❌ Biykar etiw", "callback_data": f"del:{int(time.time())}"}
+                    ]
+                ]
+            }
+            fb_res = None
+            if photo_bytes:
+                fb_res = send_telegram_photo(
+                    bot_token=bot_token,
+                    chat_id=mod_chat_id,
+                    photo_bytes=photo_bytes,
+                    caption_html=caption,
+                    reply_markup=mod_markup
+                )
+            elif video_urls:
+                fb_res = send_telegram_video(
+                    bot_token=bot_token,
+                    chat_id=mod_chat_id,
+                    video_url=video_urls[0],
+                    caption_html=caption,
+                    reply_markup=mod_markup
+                )
+            if fb_res and fb_res.get("ok"):
+                print("[DIRECT DELIVERED] Post successfully delivered directly to moderation channel!")
+                published_count += 1
+                new_urls.append(normalize_url(cand["url"]))
+                if cand.get("fallback_post_url"):
+                    new_urls.append(normalize_url(cand["fallback_post_url"]))
+                new_titles.append(BeautifulSoup(caption, "html.parser").get_text(" ", strip=True)[:350])
+                time.sleep(2)
+            else:
+                print(f"[WARN] Direct fallback delivery error: {fb_res}")
 
 
 
