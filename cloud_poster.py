@@ -4949,6 +4949,30 @@ def extract_frame_from_video(video_url: str = "", video_bytes: bytes | None = No
 
     return None
 
+def enqueue_draft_to_render(
+    cand_url: str,
+    headline: str,
+    caption_html: str,
+    video_url: str = "",
+    photo_bytes: bytes | None = None
+) -> dict[str, Any] | None:
+    enqueue_api = "https://karakalpak-translator-api.onrender.com/drafts/enqueue"
+    payload = {
+        "url": cand_url,
+        "headline": headline,
+        "caption_html": caption_html,
+        "media_type": "video" if video_url else "photo",
+        "media_url": video_url,
+        "photo_base64": base64.b64encode(photo_bytes).decode("utf-8") if photo_bytes else None
+    }
+    try:
+        resp = requests.post(enqueue_api, json=payload, timeout=35)
+        if resp.status_code == 200:
+            return resp.json()
+    except Exception as exc:
+        print(f"[WARN] enqueue_draft_to_render failed: {exc}")
+    return None
+
 def send_telegram_video(bot_token: str, chat_id: str, video_url: str, caption_html: str, reply_markup: dict[str, Any] | None = None) -> dict[str, Any]:
     url = f"https://api.telegram.org/bot{bot_token}/sendVideo"
     data_payload = {
@@ -5228,77 +5252,77 @@ def main() -> int:
 
 
         res = None
-
         video_urls = cand.get("video_urls", [])
+        # Obtain verified photo if video is absent or as fallback frame
+        photo_bytes = None
         if video_urls:
-            print(f"[MEDIA] Found video for {cand['url']}, trying to post video...")
-            target_send_chat = chat_id if auto_publish else admin_chat_id
-            moderation_markup = None
-            if not auto_publish:
-                moderation_markup = {
-                    "inline_keyboard": [
-                        [
-                            {"text": "🚀 Kanalǵa shıǵarıw", "callback_data": "pub"},
-                            {"text": "❌ Biykar etiw", "callback_data": "del"}
-                        ]
-                    ]
-                }
-            res = send_telegram_video(bot_token, target_send_chat, video_urls[0], caption, reply_markup=moderation_markup)
-            if not res or not res.get("ok"):
-                print(f"[WARN] Video send failed ({res}), falling back to verified photo.")
-                res = None
+            photo_bytes = extract_frame_from_video(video_url=video_urls[0])
+        if not photo_bytes and cand.get("photo_urls"):
+            for p_url in cand["photo_urls"]:
+                p_resp = http_get(p_url)
+                if p_resp and len(p_resp.content) > 3000:
+                    photo_bytes = p_resp.content
+                    break
+        if not photo_bytes:
+            photo_bytes = get_clean_photo_for_post(
+                client, cand, caption, item.get("wikimedia_search_keywords", "")
+            )
 
-        if not res or not res.get("ok"):
-            photo_bytes = None
-            if video_urls:
-                print(f"[FALLBACK] Video send not suitable/failed. Extracting frame from video...")
-                photo_bytes = extract_frame_from_video(video_url=video_urls[0])
-            
-            if not photo_bytes and cand.get("photo_urls"):
-                for p_url in cand["photo_urls"]:
-                    p_resp = http_get(p_url)
-                    if p_resp and len(p_resp.content) > 3000:
-                        photo_bytes = p_resp.content
-                        print(f"[MEDIA] Using video thumbnail image ({len(photo_bytes)} bytes)")
-                        break
+        if not video_urls and not photo_bytes:
+            print(f"[SKIP] Could not obtain media for {cand['url']}; blacklisting to prevent loop.")
+            new_urls.append(normalize_url(cand["url"]))
+            continue
 
-            if not photo_bytes:
-                photo_bytes = get_clean_photo_for_post(
-                    client, cand, caption, item.get("wikimedia_search_keywords", "")
-                )
+        clean_hd = BeautifulSoup(item.get("headline", "") or "", "html.parser").get_text(" ", strip=True)
 
-            if not photo_bytes:
-                print(f"[SKIP] Could not obtain clean photo for {cand['url']}; blacklisting to prevent infinite loop & trying backup story.")
-                new_urls.append(normalize_url(cand["url"]))
-                continue
+        # Enqueue draft to Render sequential moderation queue
+        q_res = enqueue_draft_to_render(
+            cand_url=cand["url"],
+            headline=clean_hd,
+            caption_html=caption,
+            video_url=video_urls[0] if video_urls else "",
+            photo_bytes=photo_bytes
+        )
 
-            target_send_chat = chat_id if auto_publish else admin_chat_id
-            moderation_markup = None
-            if not auto_publish:
-                moderation_markup = {
-                    "inline_keyboard": [
-                        [
-                            {"text": "🚀 Kanalǵa shıǵarıw", "callback_data": "pub"},
-                            {"text": "❌ Biykar etiw", "callback_data": "del"}
-                        ]
-                    ]
-                }
-            res = send_telegram_photo(bot_token, target_send_chat, photo_bytes, caption, reply_markup=moderation_markup)
-
-        if res.get("ok"):
-            msg_id = res["result"]["message_id"]
-            if auto_publish:
-                print(f"[OK] Published https://t.me/qaraqalpaqshajanaliqlar/{msg_id} -> {cand['url']}")
-            else:
-                print(f"[MODERATION] Sent draft #{msg_id} to Admin Sardarbek ({admin_chat_id}) for review -> {cand['url']}")
+        if q_res and q_res.get("status") in ("queued", "delivered_immediately"):
+            print(f"[QUEUE] Successfully added to moderation queue: status={q_res.get('status')}, draft_id={q_res.get('draft_id')}")
             published_count += 1
             new_urls.append(normalize_url(cand["url"]))
             if cand.get("fallback_post_url"):
                 new_urls.append(normalize_url(cand["fallback_post_url"]))
             new_titles.append(BeautifulSoup(caption, "html.parser").get_text(" ", strip=True)[:350])
-            time.sleep(3)
+            time.sleep(2)
         else:
-            print(f"[ERR] Telegram API error: {res}")
+            # Fallback direct delivery if Render queue endpoint is unavailable
+            print(f"[FALLBACK] Direct telegram delivery: {q_res}")
+            target_send_chat = chat_id if auto_publish else admin_chat_id
+            moderation_markup = None
+            if not auto_publish:
+                moderation_markup = {
+                    "inline_keyboard": [
+                        [
+                            {"text": "🚀 Kanalǵa shıǵarıw", "callback_data": "pub"},
+                            {"text": "❌ Biykar etiw", "callback_data": "del"}
+                        ]
+                    ]
+                }
+            if video_urls:
+                res = send_telegram_video(bot_token, target_send_chat, video_urls[0], caption, reply_markup=moderation_markup)
+            else:
+                res = send_telegram_photo(bot_token, target_send_chat, photo_bytes, caption, reply_markup=moderation_markup)
+
+            if res.get("ok"):
+                msg_id = res["result"]["message_id"]
+                published_count += 1
+                new_urls.append(normalize_url(cand["url"]))
+                if cand.get("fallback_post_url"):
+                    new_urls.append(normalize_url(cand["fallback_post_url"]))
+                new_titles.append(BeautifulSoup(caption, "html.parser").get_text(" ", strip=True)[:350])
+                time.sleep(2)
+            else:
+                print(f"[ERR] Telegram API delivery error: {res}")
+
+
 
 
 
