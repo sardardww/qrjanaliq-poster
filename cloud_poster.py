@@ -5284,35 +5284,26 @@ def main() -> int:
         res = None
 
         video_urls = cand.get("video_urls", [])
-
         if video_urls:
-
             print(f"[MEDIA] Found video for {cand['url']}, trying to post video...")
-
             target_send_chat = chat_id if auto_publish else admin_chat_id
-        moderation_markup = None
-        if not auto_publish:
-            moderation_markup = {
-                "inline_keyboard": [
-                    [
-                        {"text": "🚀 Kanalǵa shıǵarıw", "callback_data": "pub"},
-                        {"text": "❌ Biykar etiw", "callback_data": "del"}
+            moderation_markup = None
+            if not auto_publish:
+                moderation_markup = {
+                    "inline_keyboard": [
+                        [
+                            {"text": "🚀 Kanalǵa shıǵarıw", "callback_data": "pub"},
+                            {"text": "❌ Biykar etiw", "callback_data": "del"}
+                        ]
                     ]
-                ]
-            }
-        res = send_telegram_video(bot_token, target_send_chat, video_urls[0], caption, reply_markup=moderation_markup)
-
+                }
+            res = send_telegram_video(bot_token, target_send_chat, video_urls[0], caption, reply_markup=moderation_markup)
             if not res or not res.get("ok"):
-
                 print(f"[WARN] Video send failed ({res}), falling back to verified photo.")
-
                 res = None
-
-
 
         if not res or not res.get("ok"):
             photo_bytes = None
-            # If video failed or was too large, extract frame or use video thumbnail first!
             if video_urls:
                 print(f"[FALLBACK] Video send not suitable/failed. Extracting frame from video...")
                 photo_bytes = extract_frame_from_video(video_url=video_urls[0])
@@ -5349,26 +5340,21 @@ def main() -> int:
             res = send_telegram_photo(bot_token, target_send_chat, photo_bytes, caption, reply_markup=moderation_markup)
 
         if res.get("ok"):
-
             msg_id = res["result"]["message_id"]
-
-            print(f"[OK] Published https://t.me/qaraqalpaqshajanaliqlar/{msg_id} -> {cand['url']}")
-
+            if auto_publish:
+                print(f"[OK] Published https://t.me/qaraqalpaqshajanaliqlar/{msg_id} -> {cand['url']}")
+            else:
+                print(f"[MODERATION] Sent draft #{msg_id} to Admin Sardarbek ({admin_chat_id}) for review -> {cand['url']}")
             published_count += 1
-
             new_urls.append(normalize_url(cand["url"]))
-
             if cand.get("fallback_post_url"):
-
                 new_urls.append(normalize_url(cand["fallback_post_url"]))
-
             new_titles.append(BeautifulSoup(caption, "html.parser").get_text(" ", strip=True)[:350])
-
             time.sleep(3)
-
         else:
-
             print(f"[ERR] Telegram API error: {res}")
+
+
 
 
 
