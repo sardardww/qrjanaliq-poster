@@ -4983,15 +4983,15 @@ def send_telegram_video(bot_token: str, chat_id: str, video_url: str, caption_ht
         v_resp = requests.get(video_url, stream=True, timeout=25, headers={"User-Agent": "Mozilla/5.0"})
         if v_resp.status_code == 200:
             cl = int(v_resp.headers.get("content-length", 0))
-            if cl > 40 * 1024 * 1024:
+            if cl > 50 * 1024 * 1024:
                 print(f"[WARN] Video too large ({cl} bytes), falling back to photo.")
                 return {"ok": False}
             chunks = []
             total = 0
             for chunk in v_resp.iter_content(chunk_size=1024 * 1024):
                 total += len(chunk)
-                if total > 40 * 1024 * 1024:
-                    print(f"[WARN] Video exceeded 40MB during download, falling back to photo.")
+                if total > 50 * 1024 * 1024:
+                    print(f"[WARN] Video exceeded 50MB during download, falling back to photo.")
                     return {"ok": False}
                 chunks.append(chunk)
             v_bytes = b"".join(chunks)
