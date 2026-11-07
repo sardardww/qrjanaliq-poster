@@ -59,37 +59,9 @@ jobs:
           MAX_POSTS: ${{ github.event.inputs.max_posts || '1' }}
         run: python cloud_poster.py
 
-      # Self-chain: wait until 15 minutes after this run started, then dispatch next run.
-      # Automatically stops self-chaining when entering quiet sleep hours (00:00 - 04:00 Tashkent time).
-      - name: Chain next run in 15 minutes
+      - name: Execution Summary
         if: always()
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           ELAPSED=$(( $(date +%s) - START_TS ))
-          WAIT=$(( 900 - ELAPSED ))
-          if [ $WAIT -gt 0 ]; then
-            echo "Waiting ${WAIT}s to reach exactly 15-minute cadence..."
-            sleep $WAIT
-          fi
+          echo "Run completed in ${ELAPSED}s. Scheduled cron will trigger next run strictly every 15 minutes (:02, :17, :32, :47)."
 
-          # Check if the next run falls into quiet sleep hours (00:00 to 04:00 Tashkent time)
-          NEXT_UZT_HOUR=$(TZ="Asia/Tashkent" date +%-H)
-          echo "Current Tashkent time: $(TZ="Asia/Tashkent" date '+%Y-%m-%d %H:%M:%S') (Hour: $NEXT_UZT_HOUR)"
-
-          if [ "$NEXT_UZT_HOUR" -lt 4 ]; then
-            echo "[QUIET SLEEP HOURS] Current Tashkent hour ($NEXT_UZT_HOUR:00) is during sleep time (00:00 - 04:00)."
-            echo "Stopping 15-minute self-chain. Scheduled cron will automatically resume at 04:00 Tashkent time."
-            exit 0
-          fi
-
-          for i in 1 2 3; do
-            echo "Dispatching next run (attempt $i)..."
-            if gh workflow run auto_post.yml --ref main --repo ${{ github.repository }}; then
-              echo "Next run dispatched successfully!"
-              exit 0
-            fi
-            sleep 5
-          done
-          echo "Warning: Self-chain dispatch had an issue, fallback to scheduled cron."
