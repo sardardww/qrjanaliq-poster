@@ -4985,12 +4985,17 @@ def enqueue_draft_to_render(
         "media_url": video_url,
         "photo_base64": base64.b64encode(photo_bytes).decode("utf-8") if photo_bytes else None
     }
-    try:
-        resp = requests.post(enqueue_api, json=payload, timeout=35)
-        if resp.status_code == 200:
-            return resp.json()
-    except Exception as exc:
-        print(f"[WARN] enqueue_draft_to_render failed: {exc}")
+    for attempt in range(1, 4):
+        try:
+            resp = requests.post(enqueue_api, json=payload, timeout=45)
+            if resp.status_code == 200:
+                return resp.json()
+            elif resp.status_code in (502, 503, 504):
+                print(f"[RETRY] Render is restarting (HTTP {resp.status_code}), waiting 10s (attempt {attempt}/3)...")
+                time.sleep(10)
+        except Exception as exc:
+            print(f"[RETRY] enqueue_draft_to_render attempt {attempt} error: {exc}")
+            time.sleep(8)
     return None
 
 def send_telegram_video(bot_token: str, chat_id: str, video_url: str, caption_html: str, reply_markup: dict[str, Any] | None = None) -> dict[str, Any]:
