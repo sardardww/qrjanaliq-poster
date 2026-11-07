@@ -5119,15 +5119,15 @@ def main() -> int:
     has_active = 1 if queue_status.get("has_active_waiting_admin") else 0
     total_waiting = pending_in_q + has_active
 
-    # Target queue buffer: 4 posts ready (so 1 hour absence = 4 posts ready to review 1-by-1)
-    target_buffer = 4
-    if total_waiting >= target_buffer:
-        print(f"[QUEUE BUFFER FULL] Moderation queue already has {total_waiting} posts waiting ({has_active} active + {pending_in_q} pending). Target buffer is {target_buffer}.")
-        print("                    Skipping drafting this run to prevent backlog.")
+    # Max reserve in moderation queue: 15 posts (+ 1 active in chat = 16 max total)
+    max_reserve = 15
+    if pending_in_q >= max_reserve:
+        print(f"[QUEUE RESERVE FULL] Moderation queue already has {pending_in_q} posts in reserve (max: {max_reserve}) + {has_active} active in chat.")
+        print("                     Skipping drafting this run to prevent backlog.")
         return 0
 
-    posts_to_generate = max(1, min(target_buffer - total_waiting, max_posts if max_posts > 1 else 3))
-    print(f"[QUEUE STATUS] Active waiting: {has_active}, Pending in queue: {pending_in_q}. Target to generate: {posts_to_generate} post(s).")
+    posts_to_generate = max(1, min(max_reserve - pending_in_q, max_posts if max_posts > 1 else 2))
+    print(f"[QUEUE STATUS] Active in chat: {has_active}, In reserve: {pending_in_q}/{max_reserve}. Target to generate this run: {posts_to_generate} post(s).")
 
     print("[1/5] Checking @qaraqalpaqshajanaliqlar live feed for deduplication...")
 
