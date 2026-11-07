@@ -3427,57 +3427,18 @@ def curate_and_write_posts(
     analysis_json = json.dumps(rotation_analysis or [], ensure_ascii=False, indent=2)
 
     rotation_mandate = f"""
+*** CRITICAL 3-PILLAR CURATION MANDATE (QR / UZ / WORLD STRICT BALANCE) ***
+The channel @qaraqalpaqshajanaliqlar REQUIRES a continuous, balanced mix of:
+1. QARAQALPAQSTAN (QR): Exclusive, primary-source Karakalpakstan news (from district administrations/akimiyats, Joqarg'i Kenes, ministries, agencies, xaliq_ushin). Sourcing rule: Do NOT choose from generic news aggregators (kknews, KarPressa, karinform)! Choose EXCLUSIVELY from official government systems, district akimiyats, state agencies, or official state journalism (@xaliq_ushin).
+2. O'ZBEKISTON (UZ): Citizen-focused national news covering national laws, salaries, pensions, utilities/tariffs, education, transport, economy (category 'citizen_uzbekistan').
+3. DUNYO & ILM-FAN (WORLD): World events, space exploration, scientific breakthroughs, AI, robotics, striking global achievements (categories 'world' or 'world_tech').
 
-*** CRITICAL 3-CATEGORY ROTATION ENGINE (QR / UZ / WORLD STRICT BALANCE) ***
-
-Analysis of the last 3 posts published on @qaraqalpaqshajanaliqlar:
-
-{analysis_json}
-
-
-
-TARGET CATEGORY FOR THIS POST: [{target_category}]
-
-Reason: {rotation_reason}
-
-"""
-
-    if target_category == "QR":
-
-        rotation_mandate += """
-
-MANDATORY DIRECTIVE: You MUST select an EXCLUSIVE, PRIMARY-SOURCE news story about QARAQALPAQSTAN!
-
-CRITICAL SOURCING RULE (STRICT USER DIRECTIVE):
-
-- Do NOT choose from generic news aggregator channels (kknews, KarPressa, karinform)!
-
-- Choose EXCLUSIVELY from official government systems, district administrations/akimiyats (@joqargikenes, @QResMinistrlerKenesi, @qrprokuratura, @qrsudlari, @nukus_press, @qonirat_press, @moynaq_press, @shimbayrk, @turtkulhokim_uz, @xodjeyli_rk, @pressTaqiyatas, @kanlikulnews, @beruniy_press, @kegeyli_press, @taxtakopir_press, @ellikqala_press, @qaraozek_press, @shomanay_press, @bozataw_press), state agencies (@krbajixana, @kkeduuz, @jaslar_isleri_agentligi), or official state journalism (@xaliq_ushin).
-
-- This ensures 100% exclusive, authentic news and NEVER advertises competitor news channels!
-
-Do NOT pick a foreign world or general Tashkent story for this run!
-
-"""
-
-    elif target_category == "UZ":
-
-        rotation_mandate += """
-
-MANDATORY DIRECTIVE: You MUST select a citizen-focused news story about UZBEKISTAN (category 'citizen_uzbekistan', covering national laws, social security, tariffs, economy, public safety, or ministries).
-
-Do NOT pick a foreign world story for this run!
-
-"""
-
-    else:  # WORLD
-
-        rotation_mandate += """
-
-MANDATORY DIRECTIVE: You MUST select an extraordinary WORLD or SCIENCE & TECH news story (categories 'world' or 'world_tech', covering space, AI, robotics, scientific discovery, major global events, or striking international records).
-
-Do NOT pick a local repost for this run!
-
+MANDATORY DIRECTIVE: You MUST draft posts across ALL THREE categories!
+Your output list of {ask_count} items MUST contain:
+- Authentic stories from Qaraqalpaqstan (QR)
+- Citizen-focused stories from Ózbekstan (UZ)
+- Fascinating stories from Dúnya / Texnologiya (WORLD)
+Do NOT produce stories from only one category! Provide a rich, balanced diversity so our moderation queue has a steady supply of QR, UZ, and WORLD posts.
 """
 
 
@@ -5220,35 +5181,36 @@ def main() -> int:
 
 
 
-    # Prioritize items matching our strict target category (QR, UZ, or WORLD) and favor verified videos
-    def item_pref_key(it: dict[str, Any]) -> int:
+    # Classify candidate items into QR, UZ, and WORLD pools
+    def get_story_cat(it: dict[str, Any]) -> str:
         cand_temp = resolve_candidate_for_item(it, candidates)
-        if not cand_temp:
-            return 99
-        c_cat = cand_temp.get("category", "")
-        c_txt = cand_temp.get("text", "")
-        has_vid = bool(cand_temp.get("video_urls"))
+        txt = (it.get("caption_html", "") + " " + (cand_temp.get("text", "") if cand_temp else ""))
+        c_cat = cand_temp.get("category", "") if cand_temp else ""
+        if c_cat == "karakalpakstan" or QR_CATEGORY_REGEX.search(txt):
+            return "QR"
+        elif c_cat == "citizen_uzbekistan" or UZ_CATEGORY_REGEX.search(txt):
+            return "UZ"
+        else:
+            return "WORLD"
 
-        if target_category == "QR":
-            if c_cat == "karakalpakstan" or QR_CATEGORY_REGEX.search(c_txt):
-                return 0 if has_vid else 1
-            elif c_cat == "citizen_uzbekistan":
-                return 2
-            return 3
-        elif target_category == "UZ":
-            if c_cat == "citizen_uzbekistan" or UZ_CATEGORY_REGEX.search(c_txt):
-                return 0 if has_vid else 1
-            elif c_cat == "karakalpakstan":
-                return 2
-            return 3
-        else:  # WORLD
-            if c_cat in ("world", "world_tech"):
-                return 0 if has_vid else 1
-            return 2
+    qr_pool = [it for it in selected if get_story_cat(it) == "QR"]
+    uz_pool = [it for it in selected if get_story_cat(it) == "UZ"]
+    world_pool = [it for it in selected if get_story_cat(it) == "WORLD"]
 
+    print(f"      [3-PILLAR CURATION POOL] QR: {len(qr_pool)}, UZ: {len(uz_pool)}, WORLD: {len(world_pool)}")
 
+    # Interleave strictly: QR, UZ, WORLD, QR, UZ, WORLD...
+    balanced_selected: list[dict[str, Any]] = []
+    max_len = max(len(qr_pool), len(uz_pool), len(world_pool), 1)
+    for i in range(max_len):
+        if i < len(qr_pool):
+            balanced_selected.append(qr_pool[i])
+        if i < len(uz_pool):
+            balanced_selected.append(uz_pool[i])
+        if i < len(world_pool):
+            balanced_selected.append(world_pool[i])
 
-    selected.sort(key=item_pref_key)
+    selected = balanced_selected
 
 
 
@@ -5344,34 +5306,7 @@ def main() -> int:
             new_titles.append(BeautifulSoup(caption, "html.parser").get_text(" ", strip=True)[:350])
             time.sleep(2)
         else:
-            # Fallback direct delivery if Render queue endpoint is unavailable
-            print(f"[FALLBACK] Direct telegram delivery: {q_res}")
-            target_send_chat = chat_id if auto_publish else admin_chat_id
-            moderation_markup = None
-            if not auto_publish:
-                moderation_markup = {
-                    "inline_keyboard": [
-                        [
-                            {"text": "🚀 Kanalǵa shıǵarıw", "callback_data": "pub"},
-                            {"text": "❌ Biykar etiw", "callback_data": "del"}
-                        ]
-                    ]
-                }
-            if video_urls:
-                res = send_telegram_video(bot_token, target_send_chat, video_urls[0], caption, reply_markup=moderation_markup)
-            else:
-                res = send_telegram_photo(bot_token, target_send_chat, photo_bytes, caption, reply_markup=moderation_markup)
-
-            if res.get("ok"):
-                msg_id = res["result"]["message_id"]
-                published_count += 1
-                new_urls.append(normalize_url(cand["url"]))
-                if cand.get("fallback_post_url"):
-                    new_urls.append(normalize_url(cand["fallback_post_url"]))
-                new_titles.append(BeautifulSoup(caption, "html.parser").get_text(" ", strip=True)[:350])
-                time.sleep(2)
-            else:
-                print(f"[ERR] Telegram API delivery error: {res}")
+            print(f"[WARN] enqueue_draft_to_render failed or skipped: {q_res}. Draft will be retried on next scheduled run.")
 
 
 
