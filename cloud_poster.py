@@ -963,6 +963,13 @@ AUTO_WORD_FIXES = [
     (r"\bTórtkól\b", "Tórtkúl"),
     (r"\bkitabxan([a-zıóúáǵń]*)\b", r"kitapxan\1"),
     (r"\bKitabxan([a-zıóúáǵń]*)\b", r"Kitapxan\1"),
+    # New audited slips from post #466
+    (r"\bmáhalle([a-zıóúáǵń]*)\b", r"máhálle\1"),
+    (r"\bMáhalle([a-zıóúáǵń]*)\b", r"Máhálle\1"),
+    (r"\b№?\s*(PP|ПП)-(\d+)\b", r"PQ-\2-sanlı"),
+    (r"\bkesispepleri([a-zıóúáǵń]*)\b", r"kesispeleri\1"),
+    (r"\bjolawshılardı tashıw\b", "jolawshılardı tasıw"),
+    (r"\badministrativlik tártipte\b", "hákimshilik tártipte"),
 ]
 
 
