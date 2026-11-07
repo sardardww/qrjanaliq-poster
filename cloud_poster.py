@@ -975,6 +975,11 @@ AUTO_WORD_FIXES = [
     (r"\bTórtkól\b", "Tórtkúl"),
     (r"\bkitabxan([a-zıóúáǵń]*)\b", r"kitapxan\1"),
     (r"\bKitabxan([a-zıóúáǵń]*)\b", r"Kitapxan\1"),
+    (r"\bRespublıkas([ıi])\b", r"Respublikas\1"),
+    (r"\bdelegacıya\b", "delegaciya"),
+    (r"\bmásseleler([a-zıóúáǵń]*)\b", r"máseleler\1"),
+    (r"\b([e|E])ksport qiliw\b", r"\1ksport qılıw"),
+    (r"\btexnologıya([a-zıóúáǵń]*)\b", r"texnologiya\1"),
     # New audited slips from post #466
     (r"\bmáhalle([a-zıóúáǵń]*)\b", r"máhálle\1"),
     (r"\bMáhalle([a-zıóúáǵń]*)\b", r"Máhálle\1"),
