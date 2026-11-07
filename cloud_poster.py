@@ -950,6 +950,19 @@ AUTO_WORD_FIXES = [
     (r"\bshınjırshasın\b", "jetkerip beriw dizbegin"),
     (r"\bgárezlilikti\b", "ǵárezlilikti"),
     (r"\binnovacialıq\b", "innovaciyalıq"),
+    # New audited slips from posts #460 - #465
+    (r"\bis gazınen\b", "is gazınan"),
+    (r"\b(z|Z)áhárleniw([a-zıóúáǵń]*)\b", r"\1eherleniw\2"),
+    (r"\bIslom Yusupov\b", "Islam Yusupov"),
+    (r"\bmorylar\b", "morilar"),
+    (r"\bsaz isleywshiligin\b", "durıs islewin"),
+    (r"\búshinshi dáwiri\b", "úshinshi basqıshı"),
+    (r"\brayonlıq administraciya\b", "rayon hákimiyatı"),
+    (r"\brayonınıń\b", "rayonnıń"),
+    (r"\bjámiyetshilik keńlikler([a-zıóúáǵń]*)\b", r"jámiyetlik orınlar\1"),
+    (r"\bTórtkól\b", "Tórtkúl"),
+    (r"\bkitabxan([a-zıóúáǵń]*)\b", r"kitapxan\1"),
+    (r"\bKitabxan([a-zıóúáǵń]*)\b", r"Kitapxan\1"),
 ]
 
 
