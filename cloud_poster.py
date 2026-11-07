@@ -23,6 +23,7 @@ import os
 import re
 
 import sys
+sys.stdout.reconfigure(line_buffering=True)
 
 import time
 
