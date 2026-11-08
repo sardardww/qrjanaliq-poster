@@ -1710,7 +1710,7 @@ def fetch_existing_channel_posts() -> tuple[list[str], set[str]]:
 
                     href = a_tag.get("href", "").strip()
 
-                    if href and "t.me/qaraqalpaqshajanaliqlar" not in href:
+                    if href and "t.me/janaliqjanaliq" not in href and "t.me/qaraqalpaqshajanaliqlar" not in href:
 
                         seen_urls.add(normalize_url(href))
 
@@ -1718,25 +1718,18 @@ def fetch_existing_channel_posts() -> tuple[list[str], set[str]]:
 
 
 
-    resp = http_get("https://t.me/s/qaraqalpaqshajanaliqlar")
-
-    if resp:
-
-        soup1 = BeautifulSoup(resp.text, "html.parser")
-
-        page1_summaries, oldest = _extract_from_soup(soup1)
-
-        if oldest and oldest > 1:
-
-            prev_resp = http_get(f"https://t.me/s/qaraqalpaqshajanaliqlar?before={oldest}")
-
-            if prev_resp:
-
-                prev_summaries, _ = _extract_from_soup(BeautifulSoup(prev_resp.text, "html.parser"))
-
-                recent_summaries.extend(prev_summaries)
-
-        recent_summaries.extend(page1_summaries)
+    # Scrape public channel @janaliqjanaliq for real-time live posts and URLs
+    for ch_name in ["janaliqjanaliq", "qaraqalpaqshajanaliqlar"]:
+        resp = http_get(f"https://t.me/s/{ch_name}")
+        if resp:
+            soup1 = BeautifulSoup(resp.text, "html.parser")
+            page1_summaries, oldest = _extract_from_soup(soup1)
+            if oldest and oldest > 1:
+                prev_resp = http_get(f"https://t.me/s/{ch_name}?before={oldest}")
+                if prev_resp:
+                    prev_summaries, _ = _extract_from_soup(BeautifulSoup(prev_resp.text, "html.parser"))
+                    recent_summaries.extend(prev_summaries)
+            recent_summaries.extend(page1_summaries)
 
 
 
