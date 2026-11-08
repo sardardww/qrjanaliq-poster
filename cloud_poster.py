@@ -3598,7 +3598,10 @@ CRITICAL FORMATTING INSTRUCTIONS (MAINTAIN PROFESSIONAL BALANCE — DO NOT OVERD
 
 4. STRICT: ZERO BULLET POINTS! Absolutely NEVER use bullet lists (🔹, ▪️, ➖, •, etc.)! Everything must be fluent, engaging narrative prose.
 
-5. STRICT: NO SEPARATE SOURCE LINE! NEVER add "Источник:", "Derek:", or "Подробнее:". The link is embedded in the narrative.
+5. STRICT: NO SEPARATE SOURCE LINE & NO BARE HOMEPAGE URLs!
+   - NEVER add "Источник:", "Derek:", or "Подробнее:".
+   - Absolutely NEVER output bare parenthetical homepages like `(https://lex.uz/)` or `(https://www.ramsar.org/)`! General homepages DO NOT work because they only show an empty search box, not the actual law or article!
+   - All links must be complete, specific document URLs embedded onto the words via `<a href="...">word</a>`.
 
 6. CLOSING FOOTER:
 
@@ -4441,6 +4444,18 @@ def format_caption_with_direct_source_link(caption: str, exact_url: str, source_
     caption = re.sub(r'(?i)\n*Derek\s*:[^\n]*', '', caption)
 
 
+
+    # Strip any broken bare parenthetical URLs (e.g. (https://lex.uz/) or (https://www.ramsar.org/))
+    caption = re.sub(r'\s*\(\s*https?://[a-zA-Z0-9.\-_/]+\s*\)', '', caption)
+
+    # If PQ-393 is mentioned, ensure it links to the exact Lex.uz document rather than home page
+    if "393" in caption and "lex.uz/docs" not in caption:
+        caption = re.sub(
+            r'(?i)("?PQ-393-sanl[ıi]\s+qarar[ıi]nda"?|"?PQ-393-sanl[ıi]\s+qarar[ıi]"?)',
+            r'<a href="https://lex.uz/docs/-8575723">\1</a>',
+            caption,
+            count=1
+        )
 
     # Ensure clean \n\n after </b> headline
 
@@ -5363,7 +5378,7 @@ def main() -> int:
                         reply_markup=mod_markup
                     )
             if fb_res and fb_res.get("ok"):
-                print("[DIRECT DELIVERED] Post successfully delivered directly to moderation channel!")
+                print(f"[DIRECT DELIVERED] Post successfully delivered directly to moderation channel! (Message ID: {fb_res.get('result', {}).get('message_id')})")
                 published_count += 1
                 new_urls.append(normalize_url(cand["url"]))
                 if cand.get("fallback_post_url"):
