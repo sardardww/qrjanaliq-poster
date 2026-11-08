@@ -3598,10 +3598,11 @@ CRITICAL FORMATTING INSTRUCTIONS (MAINTAIN PROFESSIONAL BALANCE — DO NOT OVERD
 
 4. STRICT: ZERO BULLET POINTS! Absolutely NEVER use bullet lists (🔹, ▪️, ➖, •, etc.)! Everything must be fluent, engaging narrative prose.
 
-5. STRICT: NO SEPARATE SOURCE LINE & NO BARE HOMEPAGE URLs!
-   - NEVER add "Источник:", "Derek:", or "Подробнее:".
-   - Absolutely NEVER output bare parenthetical homepages like `(https://lex.uz/)` or `(https://www.ramsar.org/)`! General homepages DO NOT work because they only show an empty search box, not the actual law or article!
-   - All links must be complete, specific document URLs embedded onto the words via `<a href="...">word</a>`.
+5. STRICT: NO EXTERNAL MEDIA NAMES & NO SEPARATE SOURCE LINE!
+   - Absolutely NEVER mention foreign or domestic media names (e.g. "Futurism", "The Guardian", "BBC", "Nexta", "Gazeta.uz", "Kun.uz", "сообщает издание...", "dep xabar beredi...")!
+   - Report facts directly and authoritatively without crediting outside websites or publications.
+   - All links must be embedded ONLY onto natural action verbs under the headline/spotlight (e.g. <a href="EXACT_CANDIDATE_URL">сообщил</a>, <a href="EXACT_CANDIDATE_URL">заявил</a>, <a href="EXACT_CANDIDATE_URL">разрабатывает</a>).
+   - Absolutely NEVER output bare parenthetical homepages like `(https://lex.uz/)` or `(https://www.ramsar.org/)`!
 
 6. CLOSING FOOTER:
 
@@ -4457,79 +4458,69 @@ def format_caption_with_direct_source_link(caption: str, exact_url: str, source_
             count=1
         )
 
-    # Ensure clean \n\n after </b> headline
+    # 1. Unwrap any links previously attached to media or source names
+    soup = BeautifulSoup(caption, "html.parser")
+    for a in soup.find_all("a"):
+        href = a.get("href", "")
+        if "qaraqalpaqshajanaliqlar" not in href and "+ccz2kfdc8Fg1ZGYy" not in href:
+            txt = a.get_text().strip().lower()
+            if any(w in txt for w in ["basılımı", "baspası", "xızmeti", "jámiyetshilik", "guardian", "futurism", "bbc", "xızmetkerler"]):
+                a.unwrap()
+    caption = str(soup)
 
+    # 2. Strip external media mentions like 'dep xabar beredi Futurism baspası' or ', dep xabar berdi The Guardian'
+    media_pat = r'(?i),\s*dep\s+xabar\s+(?:beredi|berdi|berildi|berilmekte)\s+[a-zA-Z0-9áóúıǵńÁÓÚIǴŃ\s.\-_]+?(?:\s+(?:baspas[ıi]|bas[ıi]l[ıi]m[ıi]|x[ıi]zmeti|j[aá]miyetshilik|x[ıi]zmetkerler|sayt[ıi]|kanal[ıi]|agentligi))?(\.)'
+    caption = re.sub(media_pat, r'\1', caption)
+    media_pat2 = r'(?i)\s+dep\s+xabar\s+(?:beredi|berdi|berildi|berilmekte)\s+[a-zA-Z0-9áóúıǵńÁÓÚIǴŃ\s.\-_]+?(?:\s+(?:baspas[ıi]|bas[ıi]l[ıi]m[ıi]|x[ıi]zmeti|j[aá]miyetshilik|x[ıi]zmetkerler|sayt[ıi]|kanal[ıi]|agentligi))?(\.)'
+    caption = re.sub(media_pat2, r'\1', caption)
+
+    # 3. Ensure clean \n\n after </b> headline
     caption = re.sub(r'(</b>)\s*\n(?!\n)', r'\1\n\n', caption)
 
+    # 4. Separate headline (Spotlight) from body so headline stays clean and links only go under spotlight
+    if "</b>" in caption:
+        head_part, sep, body_part = caption.partition("</b>")
+    else:
+        head_part, sep, body_part = "", "", caption
 
-
-    soup = BeautifulSoup(caption, "html.parser")
-
-    
+    # Clean any accidental link from headline
+    head_part = re.sub(r'</?a[^>]*>', '', head_part)
 
     # Check if external link already exists in body
-
+    soup_body = BeautifulSoup(body_part, "html.parser")
     has_external_link = False
-
-    for a in soup.find_all("a"):
-
+    for a in soup_body.find_all("a"):
         href = a.get("href", "")
-
         if "qaraqalpaqshajanaliqlar" not in href and "+ccz2kfdc8Fg1ZGYy" not in href:
-
             a["href"] = exact_url
-
             has_external_link = True
-
             break
 
-            
+    body_part = str(soup_body)
 
-    if has_external_link:
-
-        caption = str(soup)
-
-    else:
-
-        # 1. Try prominent focus verbs & announcements
-
+    if not has_external_link:
+        # Try prominent focus verbs & announcements strictly under spotlight (in body)
         focus_verbs = [
-
-            r"\b(juwmaqlaw múddetlerin|málim etti|málim qılındı|málimleme berdi|xabar berildi|xabar berilmekte|xabarladı|eskertti|kútilmekte|engiziledi|engizildi|tastıyıqlandı|belgilendi|aytıp ótti|iske qospaqshı|iske qosıldı|payda boladı|ashıldı|shólkemlestirildi|júzege asırıldı|start berildi|jolǵa qoyıldı|imkaniyatına iye boladı|satıp alıwǵa boladı)\b"
-
+            r"\b(juwmaqlaw múddetlerin|málim etti|málim qılındı|málimleme berdi|xabar berildi|xabar berilmekte|xabarladı|eskertti|kútilmekte|engiziledi|engizildi|tastıyıqlandı|belgilendi|aytıp ótti|iske qospaqshı|iske qosıldı|payda boladı|ashıldı|shólkemlestirildi|júzege asırıldı|start berildi|jolǵa qoyıldı|kórsetpekte|baqlay aladı|imkaniyatına iye boladı|satıp alıwǵa boladı)\b"
         ]
-
         wrapped_body = False
-
         for pat in focus_verbs:
-
-            m = re.search(pat, caption, flags=re.IGNORECASE)
-
+            m = re.search(pat, body_part, flags=re.IGNORECASE)
             if m:
-
                 target_word = m.group(1).rstrip(".,;:!?")
-
-                caption = caption[:m.start()] + f'<a href="{exact_url}">{target_word}</a>' + caption[m.start() + len(target_word):]
-
+                body_part = body_part[:m.start()] + f'<a href="{exact_url}">{target_word}</a>' + body_part[m.start() + len(target_word):]
                 wrapped_body = True
-
                 break
 
-        
-
-        # 2. If not matched, wrap the main verb of the sentence before period
-
+        # If not matched, wrap the main verb of the first sentence before period
         if not wrapped_body:
-
-            sentence_verb_match = re.search(r'([a-zA-ZáóúıǵńÁÓÚIǴŃ]{4,})(\s*\.)', caption)
-
+            sentence_verb_match = re.search(r'([a-zA-ZáóúıǵńÁÓÚIǴŃ]{4,})(\s*\.)', body_part)
             if sentence_verb_match:
-
                 verb = sentence_verb_match.group(1)
-
-                caption = caption[:sentence_verb_match.start(1)] + f'<a href="{exact_url}">{verb}</a>' + caption[sentence_verb_match.end(1):]
-
+                body_part = body_part[:sentence_verb_match.start(1)] + f'<a href="{exact_url}">{verb}</a>' + body_part[sentence_verb_match.end(1):]
                 wrapped_body = True
+
+    caption = head_part + sep + body_part
 
 
 
