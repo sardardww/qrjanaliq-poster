@@ -1654,17 +1654,20 @@ def fetch_existing_channel_posts() -> tuple[list[str], set[str]]:
 
 
     if HISTORY_FILE.exists():
-
         try:
-
             cached = json.loads(HISTORY_FILE.read_text(encoding="utf-8"))
-
             seen_urls.update(cached.get("urls", []))
-
-            recent_summaries.extend(cached.get("titles", [])[-40:])
-
+            recent_summaries.extend(cached.get("titles", [])[-80:])
         except Exception:
-
+            pass
+    else:
+        try:
+            gh_raw = requests.get("https://raw.githubusercontent.com/sardardww/qrjanaliq-poster/main/posted_history.json", timeout=6)
+            if gh_raw.status_code == 200:
+                cached = gh_raw.json()
+                seen_urls.update(cached.get("urls", []))
+                recent_summaries.extend(cached.get("titles", [])[-80:])
+        except Exception:
             pass
 
 
@@ -5385,13 +5388,29 @@ def main() -> int:
 
 
 
+    history_payload = {"urls": new_urls[-350:], "titles": new_titles[-100:]}
     HISTORY_FILE.write_text(
-
-        json.dumps({"urls": new_urls[-200:], "titles": new_titles[-60:]}, ensure_ascii=False, indent=2),
-
+        json.dumps(history_payload, ensure_ascii=False, indent=2),
         encoding="utf-8",
-
     )
+    # Sync posted_history.json to GitHub repository so history is permanently preserved across runs
+    try:
+        gh_token = os.environ.get("GITHUB_TOKEN") or ""
+        if gh_token:
+            gh_url = "https://api.github.com/repos/sardardww/qrjanaliq-poster/contents/posted_history.json"
+            gh_req = urllib.request.Request(gh_url, headers={"Authorization": f"Bearer {gh_token}", "User-Agent": "python"})
+            gh_sha = json.loads(urllib.request.urlopen(gh_req, timeout=8).read().decode())["sha"]
+            import base64
+            gh_update = {
+                "message": f"chore(history): persist {len(new_urls)} URLs and {len(new_titles)} titles",
+                "content": base64.b64encode(HISTORY_FILE.read_bytes()).decode("utf-8"),
+                "sha": gh_sha
+            }
+            gh_put = urllib.request.Request(gh_url, data=json.dumps(gh_update).encode("utf-8"), headers={"Authorization": f"Bearer {gh_token}", "User-Agent": "python", "Content-Type": "application/json"}, method="PUT")
+            urllib.request.urlopen(gh_put, timeout=10)
+            print("[HISTORY] Successfully synced posted_history.json to GitHub repo!")
+    except Exception as exc:
+        print(f"[HISTORY] Note: GitHub sync skipped or error: {exc}")
 
     print(f"[DONE] Successfully published {published_count} posts.")
 
