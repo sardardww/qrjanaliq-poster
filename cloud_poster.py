@@ -3450,18 +3450,14 @@ def curate_and_write_posts(
     analysis_json = json.dumps(rotation_analysis or [], ensure_ascii=False, indent=2)
 
     rotation_mandate = f"""
-*** CRITICAL 3-PILLAR CURATION MANDATE (QR / UZ / WORLD STRICT BALANCE) ***
-The channel @qaraqalpaqshajanaliqlar REQUIRES a continuous, balanced mix of:
-1. QARAQALPAQSTAN (QR): Exclusive, primary-source Karakalpakstan news (from district administrations/akimiyats, Joqarg'i Kenes, ministries, agencies, xaliq_ushin). Sourcing rule: Do NOT choose from generic news aggregators (kknews, KarPressa, karinform)! Choose EXCLUSIVELY from official government systems, district akimiyats, state agencies, or official state journalism (@xaliq_ushin).
-2. O'ZBEKISTON (UZ): Citizen-focused national news covering national laws, salaries, pensions, utilities/tariffs, education, transport, economy (category 'citizen_uzbekistan').
-3. DUNYO & ILM-FAN (WORLD): High-impact world events, shocking incidents, viral phenomena, consumer AI (ChatGPT, humanoid robots), smartphones, Tesla/self-driving cars, massive rocket launches (SpaceX Starship), and extreme visual engineering (e.g. 1200°C heat tiles touched with bare hands). STRICTLY NO minor astronomy/meteor showers or obscure academic microbiology/physics!
+*** BALANCED 3-PILLAR CURATION MANDATE (QR / UZ / WORLD) ***
+The channel @qaraqalpaqshajanaliqlar seeks a rich, balanced mix of:
+1. QARAQALPAQSTAN (QR): Official Karakalpakstan news (Joqarg'i Kenes, ministries, agencies, district akimiyats, @xaliq_ushin).
+2. O'ZBEKISTON (UZ): Citizen-focused national news covering laws, salaries, pensions, utilities, education, transport, economy.
+3. DUNYO & TEXNOLOGIYA (WORLD): High-impact world events, shocking incidents, viral phenomena, consumer AI, smartphones, cars, space, extreme engineering.
 
-MANDATORY DIRECTIVE: You MUST draft posts across ALL THREE categories!
-Your output list of {ask_count} items MUST contain:
-- Authentic stories from Qaraqalpaqstan (QR)
-- Citizen-focused stories from Ózbekstan (UZ)
-- Fascinating stories from Dúnya / Texnologiya (WORLD)
-Do NOT produce stories from only one category! Provide a rich, balanced diversity so our moderation queue has a steady supply of QR, UZ, and WORLD posts.
+PRIORITY DIRECTIVE:
+Select the {ask_count} best stories across QR, UZ, and WORLD. If one category has few or no fresh stories at this hour (e.g. late evening/night hours for government press releases), freely fill the full quota of {ask_count} posts from the remaining categories (UZ and WORLD)! NEVER return an empty list or fewer than 5 items when fresh candidates are available!
 """
 
 
@@ -3679,7 +3675,32 @@ Return ONLY a JSON array of objects with keys:
     raw = (resp.text or "").strip()
     parsed = extract_json_safely(raw)
 
+    if not parsed:
+        print("[FALLBACK CURATION] Model returned empty list. Retrying with permissive top-candidate fallback...")
+        fallback_prompt = f"""You are the Editor of Telegram channel Qaraqalpaqsha jan'aliqlar.
+Select the top {ask_count} most interesting, important, or viral stories from the candidate list below.
+Return ONLY a valid JSON array of objects with keys:
+- "candidate_idx": integer
+- "source_url": string
+- "lead_emoji": string
+- "headline_ru": string
+- "paragraph1_ru": string
+- "paragraph2_ru": string
+- "wikimedia_search_keywords": string
 
+Candidates:
+""" + "\n".join(f"[{c['idx']}] {c.get('source_name','')}: {c.get('title','')[:100]} | {c.get('text','')[:250]}" for c in candidates[:ask_count*2])
+        try:
+            resp_fb = generate_content_with_fallback(
+                client,
+                DRAFT_MODELS,
+                fallback_prompt,
+                types.GenerateContentConfig(response_mime_type="application/json", temperature=0.3),
+            )
+            parsed = extract_json_safely(resp_fb.text or "")
+            print(f"[FALLBACK CURATION] Fallback successfully recovered {len(parsed)} curated posts!")
+        except Exception as fb_exc:
+            print(f"[FALLBACK CURATION] Fallback exception: {fb_exc}")
 
     print(f"[TRANSLATOR] Translating {len(parsed)} curated posts into Karakalpak via {KARAKALPAK_TRANSLATOR_API_URL}...")
 
