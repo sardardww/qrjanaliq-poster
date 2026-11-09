@@ -1606,7 +1606,7 @@ def load_config() -> tuple[str, str, str, int, str, bool]:
     bot_token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
     chat_id = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
     gemini_key = os.environ.get("GEMINI_API_KEY", "").strip()
-    max_posts = int(os.environ.get("MAX_POSTS", "1"))
+    max_posts = max(5, int(os.environ.get("MAX_POSTS", "5")))
     admin_chat_id = os.environ.get("ADMIN_CHAT_ID", "5649102659").strip()
     auto_publish = os.environ.get("AUTO_PUBLISH_TO_CHANNEL", "false").lower() in ("true", "1", "yes")
 
@@ -4802,12 +4802,14 @@ def verify_photo_clean_and_relevant(
 
 
 
-def search_wikimedia_fallback_photos(keywords: str) -> list[str]:
-
-    if not keywords.strip():
-
+def search_wikimedia_fallback_photos(keywords: Any) -> list[str]:
+    if isinstance(keywords, (list, tuple, set)):
+        keywords = " ".join(str(k) for k in keywords if k)
+    elif not isinstance(keywords, str):
+        keywords = str(keywords or "")
+    keywords = keywords.strip()
+    if not keywords:
         return []
-
     api_url = (
 
         "https://commons.wikimedia.org/w/api.php?action=query&generator=search"
@@ -5095,7 +5097,7 @@ def main() -> int:
         print("                     Skipping drafting this run to prevent backlog.")
         return 0
 
-    posts_to_generate = max(1, min(max_reserve - pending_in_q, max_posts if max_posts > 1 else 2))
+    posts_to_generate = max(5, max_posts)
     print(f"[QUEUE STATUS] Active in chat: {has_active}, In reserve: {pending_in_q}/{max_reserve}. Target to generate this run: {posts_to_generate} post(s).")
 
     print("[1/5] Checking @qaraqalpaqshajanaliqlar live feed for deduplication...")
@@ -5292,17 +5294,44 @@ def main() -> int:
 
         clean_hd = BeautifulSoup(item.get("headline", "") or "", "html.parser").get_text(" ", strip=True)
 
-        # Enqueue draft to Render sequential moderation queue
-        q_res = enqueue_draft_to_render(
-            cand_url=cand["url"],
-            headline=clean_hd,
-            caption_html=caption,
-            video_url=video_urls[0] if video_urls else "",
-            photo_bytes=photo_bytes
-        )
-
-        if q_res and q_res.get("status") in ("queued", "delivered_immediately"):
-            print(f"[QUEUE] Successfully added to moderation queue: status={q_res.get('status')}, draft_id={q_res.get('draft_id')}")
+        # Deliver EVERY post DIRECTLY to checkjanaliq (-1003941073968) so admin always has at least 5 posts ready
+        mod_chat_id = "-1003941073968"
+        post_ts = int(time.time() * 1000) % 1000000000
+        mod_markup = {
+            "inline_keyboard": [
+                [
+                    {"text": "🚀 Kanalǵa shıǵarıw", "callback_data": f"pub:{post_ts}"},
+                    {"text": "❌ Biykar etiw", "callback_data": f"del:{post_ts}"}
+                ]
+            ]
+        }
+        fb_res = None
+        if video_urls:
+            for v_url in video_urls:
+                print(f"[MEDIA] Delivering video to checkjanaliq: {v_url[:60]}...")
+                fb_res = send_telegram_video(
+                    bot_token=bot_token,
+                    chat_id=mod_chat_id,
+                    video_url=v_url,
+                    caption_html=caption,
+                    reply_markup=mod_markup
+                )
+                if fb_res and fb_res.get("ok"):
+                    print("[MEDIA] Video delivered successfully to checkjanaliq!")
+                    break
+        if not fb_res or not fb_res.get("ok"):
+            if photo_bytes:
+                print("[MEDIA] Delivering photo post to checkjanaliq...")
+                fb_res = send_telegram_photo(
+                    bot_token=bot_token,
+                    chat_id=mod_chat_id,
+                    photo_bytes=photo_bytes,
+                    caption_html=caption,
+                    reply_markup=mod_markup
+                )
+        if fb_res and fb_res.get("ok"):
+            deliv_mid = fb_res.get('result', {}).get('message_id')
+            print(f"[DIRECT TO CHECKJANALIQ] Post #{published_count+1} delivered! (Message ID: {deliv_mid})")
             published_count += 1
             new_urls.append(normalize_url(cand["url"]))
             if cand.get("fallback_post_url"):
