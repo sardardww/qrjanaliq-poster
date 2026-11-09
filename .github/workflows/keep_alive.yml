@@ -1,0 +1,15 @@
+name: "Render 24/7 Keep-Alive Pinger"
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ping Render Webhook & Health
+        run: |
+          curl -s -f --max-time 15 https://karakalpak-translator-api.onrender.com/health || true
