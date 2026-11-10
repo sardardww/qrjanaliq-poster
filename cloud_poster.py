@@ -1858,6 +1858,8 @@ def scrape_telegram_channel(category: str, channel: str, max_age_hours: int) -> 
         video_urls = []
 
         for v_el in msg.select("video.tgme_widget_message_video, video, .tgme_widget_message_roundvideo, .tgme_widget_message_video_player video"):
+            if v_el.find_parent(class_=["tgme_widget_message_reply", "tgme_widget_message_link_preview"]):
+                continue
             src = v_el.get("src", "").strip()
             if not src:
                 for s_el in v_el.select("source"):
@@ -1868,8 +1870,12 @@ def scrape_telegram_channel(category: str, channel: str, max_age_hours: int) -> 
             if src and src.startswith("http") and src not in video_urls:
                 video_urls.append(src)
 
-        # If post has a video player but video tag wasn't inlined, fetch embed page
-        if not video_urls and msg.select(".tgme_widget_message_video_player"):
+        # If post has a video player (not inside a reply/link preview) but video tag wasn't inlined, fetch embed page
+        own_video_players = [
+            vp for vp in msg.select(".tgme_widget_message_video_player")
+            if not vp.find_parent(class_=["tgme_widget_message_reply", "tgme_widget_message_link_preview"])
+        ]
+        if not video_urls and own_video_players:
             post_data_id = msg.get("data-post") or ""
             if post_data_id:
                 try:
@@ -1877,6 +1883,8 @@ def scrape_telegram_channel(category: str, channel: str, max_age_hours: int) -> 
                     if embed_resp and embed_resp.text:
                         esoup = BeautifulSoup(embed_resp.text, "html.parser")
                         for ev in esoup.select("video"):
+                            if ev.find_parent(class_=["tgme_widget_message_reply", "tgme_widget_message_link_preview"]):
+                                continue
                             esrc = ev.get("src", "").strip()
                             if esrc and esrc.startswith("http") and esrc not in video_urls:
                                 video_urls.append(esrc)
@@ -3744,11 +3752,14 @@ Candidates:
 
             continue
 
-
+        # Strip any raw HTML tags before sending to Tilmoch neural translator so tags are never mangled
+        clean_headline_ru = re.sub(r"<[^>]+>", "", headline_ru).strip()
+        clean_p1_ru = re.sub(r"<[^>]+>", "", p1_ru).strip()
+        clean_p2_ru = re.sub(r"<[^>]+>", "", p2_ru).strip() if p2_ru else ""
 
         print(f"[TRANSLATE_API] Translating candidate #{it.get('candidate_idx')} components via Tilmoch...")
 
-        tr_headline = translate_post_via_custom_api(headline_ru, timeout=30, retries=2)
+        tr_headline = translate_post_via_custom_api(clean_headline_ru, timeout=30, retries=2)
 
         if not tr_headline:
 
@@ -3758,7 +3769,7 @@ Candidates:
 
 
 
-        tr_p1 = translate_post_via_custom_api(p1_ru, timeout=45, retries=2)
+        tr_p1 = translate_post_via_custom_api(clean_p1_ru, timeout=45, retries=2)
 
         if not tr_p1:
 
@@ -3770,9 +3781,9 @@ Candidates:
 
         tr_p2 = ""
 
-        if p2_ru:
+        if clean_p2_ru:
 
-            tr_p2 = translate_post_via_custom_api(p2_ru, timeout=45, retries=2) or ""
+            tr_p2 = translate_post_via_custom_api(clean_p2_ru, timeout=45, retries=2) or ""
 
 
 
@@ -3801,13 +3812,17 @@ Candidates:
 
 
         constructed_cap = "\n\n".join(body_parts)
+        it["caption_html"] = constructed_cap
 
-
+        # Verify and resolve exact candidate (auto-correcting any off-by-one candidate_idx/source_url)
+        matched_cand = resolve_candidate_for_item(it, candidates)
+        if matched_cand:
+            exact_url = matched_cand.get("url") or matched_cand.get("fallback_post_url") or ""
+            it["source_url"] = exact_url
+        else:
+            exact_url = it.get("source_url") or ""
 
         # Inject direct source link into paragraph 1 and append standardized footer
-
-        exact_url = it.get("source_url") or ""
-
         constructed_cap = format_caption_with_direct_source_link(constructed_cap, exact_url)
 
 
@@ -4510,7 +4525,10 @@ def format_caption_with_direct_source_link(caption: str, exact_url: str, source_
     has_external_link = False
     for a in soup_body.find_all("a"):
         href = a.get("href", "")
-        if "qaraqalpaqshajanaliqlar" not in href and "+ccz2kfdc8Fg1ZGYy" not in href:
+        if "qaraqalpaqshajanaliqlar" not in href and "+ccz2kfdc8Fg1ZGYy" not in href and "janaliqjanaliq" not in href:
+            if not a.get_text().strip():
+                a.unwrap()
+                continue
             a["href"] = exact_url
             has_external_link = True
             break
@@ -4679,56 +4697,119 @@ def audit_and_enforce_karakalpak_quality(caption: str, cand: dict[str, Any]) -> 
 
 
 
-def resolve_candidate_for_item(item: dict[str, Any], candidates: list[dict[str, Any]]) -> dict[str, Any] | None:
+RU_STOP_STEMS = {
+    "котор", "через", "после", "также", "будет", "время", "этого", "между",
+    "очень", "более", "около", "из-за", "могут", "чтобы", "когда", "только",
+    "своей", "своег", "новых", "новый", "новая", "стали", "стало",
+}
 
-    """Match candidate by exact source_url FIRST so off-by-one candidate_idx can NEVER attach the wrong photo!"""
+
+def _score_candidate_content_match(item: dict[str, Any], cand: dict[str, Any]) -> float:
+    """Compute lexical & numeric overlap score between drafted item and candidate text to prevent LLM index/URL shifts."""
+    cand_raw = f"{cand.get('title', '')} {cand.get('text', '')} {cand.get('url', '')}"
+    cand_lower = cand_raw.lower()
+    cand_latin = transliterate_cyrillic_to_qq_latin(cand_raw).lower()
+
+    item_ru = f"{item.get('headline_ru', '')} {item.get('paragraph1_ru', '')} {item.get('paragraph2_ru', '')}".lower()
+    item_cap = strip_post_footer(BeautifulSoup(item.get("caption_html", "") or "", "html.parser").get_text(" ", strip=True)).lower()
+    kw_raw = item.get("wikimedia_search_keywords") or ""
+    if isinstance(kw_raw, (list, tuple, set)):
+        kw_raw = " ".join(str(x) for x in kw_raw)
+    item_kw = str(kw_raw).lower()
+
+    score = 0.0
+
+    # 1. Exact numbers overlap (e.g., 38, 148, 362, 250, 191)
+    item_nums = {n for n in re.findall(r"\b\d+\b", f"{item_ru} {item_cap}") if n not in ("2026", "2025", "1", "2", "3")}
+    cand_nums = set(re.findall(r"\b\d+\b", cand_lower))
+    shared_nums = item_nums & cand_nums
+    score += len(shared_nums) * 3.0
+
+    # 2. Cyrillic stem overlap (for Russian / Uzbek Cyrillic / Karakalpak Cyrillic candidates)
+    ru_words = re.findall(r"[а-яёқғўҳәөүң]{4,}", item_ru)
+    ru_stems = {w[:5] for w in ru_words if w[:5] not in RU_STOP_STEMS}
+    for st in ru_stems:
+        if st in cand_lower:
+            score += 2.0
+
+    # 3. Latin / English / Transliterated stem overlap
+    lat_source = f"{item_cap} {transliterate_cyrillic_to_qq_latin(item_ru).lower()} {item_kw}"
+    lat_words = re.findall(r"[a-záóúıǵń]{4,}", lat_source)
+    lat_stems = {w[:5] for w in lat_words if w[:5] not in STOP_STEMS and w[:6] not in STOP_STEMS}
+    for st in lat_stems:
+        if st in cand_latin or st in cand_lower:
+            score += 1.5
+
+    return score
+
+
+def resolve_candidate_for_item(item: dict[str, Any], candidates: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Match candidate by source_url/candidate_idx AND verify content overlap so LLM off-by-one shifts NEVER attach the wrong video/photo!"""
+    direct_cand: dict[str, Any] | None = None
 
     src_url = normalize_url(item.get("source_url") or "")
-
     if src_url:
-
         for c in candidates:
-
             if normalize_url(c["url"]) == src_url or normalize_url(c.get("fallback_post_url", "")) == src_url:
+                direct_cand = c
+                break
 
-                return c
+    if not direct_cand:
+        cap = item.get("caption_html") or ""
+        for m in re.findall(r'href="([^"]+)"', cap):
+            nm = normalize_url(m)
+            if "t.me/qaraqalpaqshajanaliqlar" in nm or "+ccz2kfdc8Fg1ZGYy" in m or "janaliqjanaliq" in nm:
+                continue
+            for c in candidates:
+                if normalize_url(c["url"]) == nm or normalize_url(c.get("fallback_post_url", "")) == nm:
+                    direct_cand = c
+                    break
+            if direct_cand:
+                break
 
-    # Also check URL inside Deregi <a href="..."> in caption_html
+    if not direct_cand:
+        idx = item.get("candidate_idx")
+        if isinstance(idx, int) and 0 <= idx < len(candidates):
+            direct_cand = candidates[idx]
 
-    cap = item.get("caption_html") or ""
+    # Score all candidates against the drafted item's actual text/numbers/entities
+    best_cand: dict[str, Any] | None = None
+    best_score = -1.0
+    for c in candidates:
+        sc = _score_candidate_content_match(item, c)
+        if sc > best_score:
+            best_score = sc
+            best_cand = c
 
-    for m in re.findall(r'href="([^"]+)"', cap):
+    if direct_cand is not None:
+        direct_score = _score_candidate_content_match(item, direct_cand)
+        # If another candidate matches the story text much better (LLM shifted candidate_idx/source_url):
+        if best_cand is not None and best_cand is not direct_cand:
+            if (direct_score < 2.0 and best_score >= 4.0) or (best_score >= 6.0 and best_score > direct_score * 3.0):
+                print(
+                    f"[CAND-FIX] Corrected LLM candidate mismatch! "
+                    f"Was {direct_cand.get('url')} (score={direct_score:.1f}) -> "
+                    f"Fixed to {best_cand.get('url')} (score={best_score:.1f})"
+                )
+                item["source_url"] = best_cand.get("url") or ""
+                return best_cand
+        # If direct_cand has Cyrillic text (same script as headline_ru) yet has 0.0 overlap with the drafted story:
+        if direct_score == 0.0 and re.search(r"[а-яА-ЯёЁ]", direct_cand.get("text", "")):
+            print(f"[CAND-REJECT] Candidate {direct_cand.get('url')} has 0.0 content overlap with drafted text! Rejecting mismatch.")
+            return best_cand if best_score >= 4.0 else None
+        return direct_cand
 
-        nm = normalize_url(m)
-
-        if "t.me/qaraqalpaqshajanaliqlar" in nm:
-
-            continue
-
-        for c in candidates:
-
-            if normalize_url(c["url"]) == nm or normalize_url(c.get("fallback_post_url", "")) == nm:
-
-                return c
-
-
-
-    idx = item.get("candidate_idx")
-
-    if isinstance(idx, int) and 0 <= idx < len(candidates):
-
-        return candidates[idx]
+    if best_cand is not None and best_score >= 4.0:
+        item["source_url"] = best_cand.get("url") or ""
+        return best_cand
 
     return None
-
-
-
 
 
 def verify_photo_clean_and_relevant(
     client: genai.Client, img_bytes: bytes, story_summary: str
 ) -> bool:
-    """Inspect candidate image via PIL + Gemini Vision to reject watermarks, document tables, blurry icons, or mismatched scenes."""
+    """Inspect candidate image via PIL + Gemini Vision to reject watermarks, channel logos, banners, document tables, or mismatched scenes."""
     try:
         with Image.open(io.BytesIO(img_bytes)) as im:
             w, h = im.size
@@ -4747,11 +4828,11 @@ def verify_photo_clean_and_relevant(
             f"News post text:\n{story_summary[:500]}\n\n"
             "Inspect this image strictly as a senior photo editor and return JSON {\"ok\": true/false, \"reason\": \"...\"}.\n"
             "Set \"ok\": false if ANY of these apply:\n"
-            "1) It contains ANY Telegram channel watermark, handle (@...), website logo/banner, or third-party branding (@KARAKALPAK24, @xaliq_ushin, @KarPressa, @qalampir, @kunuzofficial, @daryo, etc.).\n"
-            "2) It is a screenshot of a text document, table, spreadsheet, decree/resolution table, PDF page, or chart with small text.\n"
-            "3) It is a generic website logo, coat of arms/emblem only, map diagram, cartoon illustration, or template with big promotional text overlay (e.g. 'SHOSHILINCH', 'RASMIY XABAR', 'DIQQAT').\n"
-            "4) It is blurry, pixelated, low-resolution, or visually broken.\n"
-            "5) The scene/people/objects in the photo clearly belong to a DIFFERENT story or contradict the post text."
+            "1) It contains ANY Telegram channel logo, watermark, handle (@...), website logo/url, or third-party media badge anywhere on the image (e.g. @KARAKALPAK24, @xaliq_ushin, @kunuzofficial, @KarPressa, @qalampir, @daryo, kun.uz, gazeta.uz, uza.uz, etc.).\n"
+            "2) It has big promotional/template banner text or news headlines written on top of the image (e.g. 'SHOSHILINCH', 'RASMIY XABAR', 'TEZKOR', 'DIQQAT', 'MÚNÁSIBET', 'E\\'LON', 'RADDİYA').\n"
+            "3) It is a screenshot of a text document, table, spreadsheet, decree/resolution table, PDF page, or chart with small text.\n"
+            "4) It is a generic website logo, coat of arms/emblem only, map diagram, cartoon illustration, or blurry/low-resolution image.\n"
+            "5) The visual scene/people/objects in the photo clearly belong to a DIFFERENT story or contradict the post text."
         )
         res = generate_content_with_fallback(
             client,
@@ -4777,7 +4858,51 @@ def verify_photo_clean_and_relevant(
             return False
         return True
     except Exception as exc:
-        print(f"[WARN] Vision check warning: {exc}")
+        print(f"[WARN] Vision photo check exception ({exc}); rejecting unverified photo so clean AI photo is generated.")
+        return False
+
+
+def verify_video_frame_matches_story(
+    client: genai.Client, frame_bytes: bytes, story_summary: str
+) -> bool:
+    """Verify that a video's visual scene belongs to the same news story (while ALLOWING channel watermarks/logos on videos as requested by user)."""
+    if not frame_bytes:
+        return True
+    try:
+        check_prompt = (
+            f"News post text:\n{story_summary[:500]}\n\n"
+            "This image is a frame extracted from a video attached to the news post above.\n"
+            "Return JSON {\"ok\": true/false, \"reason\": \"...\"}.\n"
+            "CRITICAL RULES FOR VIDEOS:\n"
+            "- DO NOT reject the video for having Telegram channel watermarks, logos, @handles, or text overlays! Watermarks on videos are ALLOWED because the admin reviews videos manually.\n"
+            "- Set \"ok\": false ONLY if the visual scene, people, or event in the video frame clearly belong to a COMPLETELY DIFFERENT, unrelated news story that contradicts the post text (for example: a politician speaking at a podium in Congress when the text is about a drone delivering food to a chimpanzee in a flood).\n"
+            "- If the video scene matches or is plausible for the news story, set \"ok\": true."
+        )
+        res = generate_content_with_fallback(
+            client,
+            VISION_MODELS,
+            [
+                types.Part.from_bytes(data=frame_bytes, mime_type="image/jpeg"),
+                check_prompt,
+            ],
+            types.GenerateContentConfig(
+                response_mime_type="application/json",
+                temperature=0.0,
+            ),
+        )
+        raw_verdict = (res.text or "").strip()
+        if raw_verdict.startswith("```"):
+            raw_verdict = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw_verdict, flags=re.DOTALL).strip()
+        verdict = json.loads(raw_verdict)
+        if isinstance(verdict, list) and verdict:
+            verdict = verdict[0]
+        time.sleep(1.0)
+        if isinstance(verdict, dict) and not verdict.get("ok", True):
+            print(f"[INFO] Vision rejected mismatched video: {verdict.get('reason')}")
+            return False
+        return True
+    except Exception as exc:
+        print(f"[WARN] Video frame check warning: {exc}")
         return True
 
 
@@ -4893,25 +5018,26 @@ def generate_ai_news_photo(
         except Exception as exc:
             print(f"[INFO] AI Studio {gem_img_model} unavailable on current key tier: {str(exc)[:90]}")
 
-    # Step 2C: Guaranteed photorealistic Flux generation driven by the AI Studio prompt (with clean crop)
-    try:
-        seed = random.randint(1000, 999999)
-        flux_url = (
-            f"https://image.pollinations.ai/prompt/{quote_plus(img_prompt)}"
-            f"?width=1280&height=768&nologo=true&model=flux&seed={seed}"
-        )
-        f_resp = http_get(flux_url, timeout=30)
-        if f_resp and len(f_resp.content) > 15000:
-            with Image.open(io.BytesIO(f_resp.content)) as im:
-                if im.width >= 600 and im.height >= 400:
-                    # Crop bottom 48px to guarantee zero corner watermark
-                    clean_im = im.crop((0, 0, im.width, im.height - 48)).convert("RGB")
-                    buf = io.BytesIO()
-                    clean_im.save(buf, format="JPEG", quality=93)
-                    print(f"[AI PHOTO] Generated clean photorealistic image ({clean_im.width}x{clean_im.height})!")
-                    return buf.getvalue()
-    except Exception as exc:
-        print(f"[WARN] Flux AI photo generation fallback error: {exc}")
+    # Step 2C: Guaranteed photorealistic Flux generation driven by the AI Studio prompt (with clean crop & multi-attempt retry)
+    for model_variant in ("flux", "turbo"):
+        try:
+            seed = random.randint(1000, 999999)
+            flux_url = (
+                f"https://image.pollinations.ai/prompt/{quote_plus(img_prompt)}"
+                f"?width=1280&height=768&nologo=true&model={model_variant}&seed={seed}"
+            )
+            f_resp = http_get(flux_url, timeout=30)
+            if f_resp and len(f_resp.content) > 15000:
+                with Image.open(io.BytesIO(f_resp.content)) as im:
+                    if im.width >= 600 and im.height >= 400:
+                        # Crop bottom 48px to guarantee zero corner watermark
+                        clean_im = im.crop((0, 0, im.width, im.height - 48)).convert("RGB")
+                        buf = io.BytesIO()
+                        clean_im.save(buf, format="JPEG", quality=93)
+                        print(f"[AI PHOTO] Generated clean photorealistic image via {model_variant} ({clean_im.width}x{clean_im.height})!")
+                        return buf.getvalue()
+        except Exception as exc:
+            print(f"[WARN] AI photo generation ({model_variant}) attempt warning: {exc}")
 
     return None
 
@@ -5325,20 +5451,14 @@ def main() -> int:
 
 
         res = None
-        video_urls = cand.get("video_urls", [])
-        # Obtain strictly verified photo (or AI-generated photo if missing/rejected)
-        photo_bytes = get_clean_photo_for_post(
-            client, cand, caption, item.get("wikimedia_search_keywords", "")
-        )
-        if not photo_bytes and video_urls:
-            photo_bytes = extract_frame_from_video(video_url=video_urls[0])
-
-        if not video_urls and not photo_bytes:
-            print(f"[SKIP] Could not obtain media for {cand['url']}; blacklisting to prevent loop.")
-            new_urls.append(normalize_url(cand["url"]))
-            continue
-
-        clean_hd = BeautifulSoup(item.get("headline", "") or "", "html.parser").get_text(" ", strip=True)
+        raw_video_urls = cand.get("video_urls", [])
+        video_urls: list[str] = []
+        for v_url in raw_video_urls:
+            v_frame = extract_frame_from_video(video_url=v_url)
+            if v_frame and not verify_video_frame_matches_story(client, v_frame, caption):
+                print(f"[MEDIA] Video rejected (scene mismatch with story text): {v_url[:60]}")
+                continue
+            video_urls.append(v_url)
 
         # Deliver EVERY post DIRECTLY to checkjanaliq (-1003941073968) so admin always has at least 5 posts ready
         mod_chat_id = "-1003941073968"
@@ -5354,7 +5474,7 @@ def main() -> int:
         fb_res = None
         if video_urls:
             for v_url in video_urls:
-                print(f"[MEDIA] Delivering video to checkjanaliq: {v_url[:60]}...")
+                print(f"[MEDIA] Delivering verified video to checkjanaliq: {v_url[:60]}...")
                 fb_res = send_telegram_video(
                     bot_token=bot_token,
                     chat_id=mod_chat_id,
@@ -5365,16 +5485,25 @@ def main() -> int:
                 if fb_res and fb_res.get("ok"):
                     print("[MEDIA] Video delivered successfully to checkjanaliq!")
                     break
+
+        photo_bytes = None
         if not fb_res or not fb_res.get("ok"):
-            if photo_bytes:
-                print("[MEDIA] Delivering photo post to checkjanaliq...")
-                fb_res = send_telegram_photo(
-                    bot_token=bot_token,
-                    chat_id=mod_chat_id,
-                    photo_bytes=photo_bytes,
-                    caption_html=caption,
-                    reply_markup=mod_markup
-                )
+            # Obtain strictly verified clean photo (or AI-generated photo if source photo has logo/watermark/banner or is missing)
+            photo_bytes = get_clean_photo_for_post(
+                client, cand, caption, item.get("wikimedia_search_keywords", "")
+            )
+            if not photo_bytes:
+                print(f"[SKIP] Could not obtain media for {cand['url']}; blacklisting to prevent loop.")
+                new_urls.append(normalize_url(cand["url"]))
+                continue
+            print("[MEDIA] Delivering photo post to checkjanaliq...")
+            fb_res = send_telegram_photo(
+                bot_token=bot_token,
+                chat_id=mod_chat_id,
+                photo_bytes=photo_bytes,
+                caption_html=caption,
+                reply_markup=mod_markup
+            )
         if fb_res and fb_res.get("ok"):
             deliv_mid = fb_res.get('result', {}).get('message_id')
             print(f"[DIRECT TO CHECKJANALIQ] Post #{published_count+1} delivered! (Message ID: {deliv_mid})")
