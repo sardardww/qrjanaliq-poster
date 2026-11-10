@@ -1621,7 +1621,7 @@ def load_config() -> tuple[str, str, str, int, str, bool]:
         raise RuntimeError("Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID.")
     if not gemini_key:
         raise RuntimeError("Missing GEMINI_API_KEY secret.")
-    return bot_token, chat_id, gemini_key, max(1, min(max_posts, 4)), admin_chat_id, auto_publish
+    return bot_token, chat_id, gemini_key, max(5, max_posts), admin_chat_id, auto_publish
 
 def http_get(url: str, timeout: int = 20) -> requests.Response | None:
 
@@ -1884,8 +1884,10 @@ def scrape_telegram_channel(category: str, channel: str, max_age_hours: int) -> 
                     pass
 
         photo_urls = []
-        for wrap in msg.select(".tgme_widget_message_photo_wrap, i[style*='background-image']"):
+        for wrap in msg.select(".tgme_widget_message_photo_wrap"):
             if "tgme_widget_message_video_thumb" in wrap.get("class", []):
+                continue
+            if wrap.find_parent(class_=["tgme_widget_message_reply", "tgme_widget_message_link_preview"]):
                 continue
             m = BG_URL_RE.search(wrap.get("style", ""))
             if m and m.group(1) not in photo_urls:
@@ -4724,103 +4726,59 @@ def resolve_candidate_for_item(item: dict[str, Any], candidates: list[dict[str, 
 
 
 def verify_photo_clean_and_relevant(
-
     client: genai.Client, img_bytes: bytes, story_summary: str
-
 ) -> bool:
-
-    """Inspect candidate image via PIL + Gemini Vision to reject watermarks OR mismatched scenes."""
-
+    """Inspect candidate image via PIL + Gemini Vision to reject watermarks, document tables, blurry icons, or mismatched scenes."""
     try:
-
         with Image.open(io.BytesIO(img_bytes)) as im:
-
             w, h = im.size
-
-            if w < 250 or h < 150:
-
+            if w < 550 or h < 340:
+                print(f"[INFO] Photo rejected by dimensions ({w}x{h} < 550x340)")
                 return False
-
+            ratio = w / float(h)
+            if ratio < 0.65 or ratio > 2.4:
+                print(f"[INFO] Photo rejected by aspect ratio ({ratio:.2f})")
+                return False
     except Exception:
-
         return False
 
-
-
     try:
-
         check_prompt = (
-
-            f"News post text:\n{story_summary[:450]}\n\n"
-
-            "Inspect this image strictly and return JSON {\"ok\": true/false, \"reason\": \"...\"}.\n"
-
+            f"News post text:\n{story_summary[:500]}\n\n"
+            "Inspect this image strictly as a senior photo editor and return JSON {\"ok\": true/false, \"reason\": \"...\"}.\n"
             "Set \"ok\": false if ANY of these apply:\n"
-
-            "1) It contains a competitor Telegram channel watermark/handle (@KARAKALPAK24, @xaliq_ushin, @KarPressa, @qalampir, @kunuzofficial).\n"
-
-            "2) It is a generic website logo/icon (e.g. Google News icon).\n"
-
-            "3) The scene/people/event in the photo clearly belong to a DIFFERENT news story than the post text "
-
-            "(for example, an airport Olympiad flag ceremony on a post about a Swiss Ambassador visiting School #34, or a football photo on an economy story)."
-
+            "1) It contains ANY Telegram channel watermark, handle (@...), website logo/banner, or third-party branding (@KARAKALPAK24, @xaliq_ushin, @KarPressa, @qalampir, @kunuzofficial, @daryo, etc.).\n"
+            "2) It is a screenshot of a text document, table, spreadsheet, decree/resolution table, PDF page, or chart with small text.\n"
+            "3) It is a generic website logo, coat of arms/emblem only, map diagram, cartoon illustration, or template with big promotional text overlay (e.g. 'SHOSHILINCH', 'RASMIY XABAR', 'DIQQAT').\n"
+            "4) It is blurry, pixelated, low-resolution, or visually broken.\n"
+            "5) The scene/people/objects in the photo clearly belong to a DIFFERENT story or contradict the post text."
         )
-
         res = generate_content_with_fallback(
-
             client,
-
             VISION_MODELS,
-
             [
-
                 types.Part.from_bytes(data=img_bytes, mime_type="image/jpeg"),
-
                 check_prompt,
-
             ],
-
             types.GenerateContentConfig(
-
                 response_mime_type="application/json",
-
                 temperature=0.0,
-
             ),
-
         )
-
         raw_verdict = (res.text or "").strip()
-
         if raw_verdict.startswith("```"):
-
             raw_verdict = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw_verdict, flags=re.DOTALL).strip()
-
         verdict = json.loads(raw_verdict)
-
         if isinstance(verdict, list) and verdict:
-
             verdict = verdict[0]
-
-        time.sleep(1.2)
-
+        time.sleep(1.0)
         if isinstance(verdict, dict) and not verdict.get("ok", False):
-
             print(f"[INFO] Vision rejected photo: {verdict.get('reason')}")
-
             return False
-
         return True
-
     except Exception as exc:
-
-        print(f"[WARN] Vision check warning (allowing valid PIL image): {exc}")
-
+        print(f"[WARN] Vision check warning: {exc}")
         return True
-
-
-
 
 
 def search_wikimedia_fallback_photos(keywords: Any) -> list[str]:
@@ -4832,119 +4790,194 @@ def search_wikimedia_fallback_photos(keywords: Any) -> list[str]:
     if not keywords:
         return []
     api_url = (
-
         "https://commons.wikimedia.org/w/api.php?action=query&generator=search"
-
         f"&gsrnamespace=6&gsrsearch={quote_plus(keywords + ' filetype:bitmap')}&gsrlimit=4"
-
         "&prop=imageinfo&iiprop=url&iiurlwidth=1200&format=json"
-
     )
-
     resp = http_get(api_url, timeout=12)
-
     if not resp:
-
         return []
-
     urls: list[str] = []
-
     try:
-
         pages = resp.json().get("query", {}).get("pages", {})
-
         for page in pages.values():
-
             for ii in page.get("imageinfo", []):
-
                 u = ii.get("thumburl") or ii.get("url")
-
                 if u and u.lower().endswith((".jpg", ".jpeg", ".png")):
-
                     urls.append(u)
-
     except Exception:
-
         pass
-
     return urls
 
 
-
-
-
-def get_clean_photo_for_post(
-
-    client: genai.Client, candidate: dict[str, Any], caption: str, wiki_keywords: str
-
+def generate_ai_news_photo(
+    client: genai.Client, caption: str, wiki_keywords: Any = ""
 ) -> bytes | None:
+    """Generate a clean, photorealistic editorial news image via AI Studio when source has no valid photo."""
+    plain_story = BeautifulSoup(caption or "", "html.parser").get_text(" ", strip=True)[:500]
+    kw_str = " ".join(wiki_keywords) if isinstance(wiki_keywords, (list, tuple, set)) else str(wiki_keywords or "")
 
-    urls = list(candidate.get("photo_urls", []))
+    # Step 1: Craft a precise photorealistic editorial prompt using AI Studio
+    img_prompt = (
+        f"Photorealistic editorial news photography illustrating: {kw_str or plain_story[:140]}. "
+        "Shot on Canon EOS R5 35mm lens, natural lighting, high detail, realistic environment, "
+        "strictly no text, no letters, no numbers, no logos, no watermarks, no signs."
+    )
+    try:
+        prompt_Instruction = (
+            "Write a single concise English image-generation prompt (max 45 words) for a realistic editorial news photograph "
+            "that visually illustrates the following news story.\n"
+            "Rules:\n"
+            "- Describe a concrete, realistic visual scene (buildings, infrastructure, nature, technology, transport, or objects).\n"
+            "- Avoid close-up portraits of specific named politicians.\n"
+            "- Explicitly end with: 'photorealistic editorial news photography, natural lighting, 4k DSLR, no text, no logos, no watermarks'.\n"
+            "- Return ONLY the raw English prompt string, nothing else.\n\n"
+            f"News text: {plain_story}"
+        )
+        p_res = generate_content_with_fallback(
+            client,
+            VISION_MODELS,
+            prompt_Instruction,
+            types.GenerateContentConfig(temperature=0.3),
+        )
+        if p_res and p_res.text and len(p_res.text.strip()) > 20:
+            img_prompt = p_res.text.strip().replace("\n", " ").strip('"')
+            print(f"[AI PHOTO] Crafted prompt: {img_prompt[:120]}...")
+    except Exception as exc:
+        print(f"[WARN] AI prompt crafting fallback: {exc}")
 
-
-
-    art_url = candidate.get("url", "")
-
-    if art_url.startswith("http") and "t.me/" not in art_url and "news.google.com" not in art_url:
-
-        art_resp = http_get(art_url)
-
-        if art_resp:
-
-            soup = BeautifulSoup(art_resp.text, "html.parser")
-
-            og = soup.select_one("meta[property='og:image']")
-
-            if og and og.get("content") and og["content"].strip() not in urls:
-
-                urls.insert(0, og["content"].strip())
-
-
-
-    urls.extend(search_wikimedia_fallback_photos(wiki_keywords))
-
-
-
-    for img_url in urls[:6]:
-
-        resp = http_get(img_url)
-
-        if not resp or len(resp.content) < 15000:
-
-            continue
-
+    # Step 2A: Try Google AI Studio native Imagen 3 endpoint
+    for imagen_model in ("imagen-3.0-generate-002", "imagen-3.0-generate-001"):
         try:
+            im_res = client.models.generate_images(
+                model=imagen_model,
+                prompt=img_prompt,
+                config=types.GenerateImagesConfig(
+                    number_of_images=1,
+                    output_mime_type="image/jpeg",
+                    aspect_ratio="16:9",
+                ),
+            )
+            if im_res and getattr(im_res, "generated_images", None):
+                raw_bytes = im_res.generated_images[0].image.image_bytes
+                if raw_bytes and len(raw_bytes) > 15000:
+                    with Image.open(io.BytesIO(raw_bytes)) as im:
+                        rgb = im.convert("RGB")
+                        buf = io.BytesIO()
+                        rgb.save(buf, format="JPEG", quality=93)
+                        print(f"[AI PHOTO] Generated via AI Studio {imagen_model}!")
+                        return buf.getvalue()
+        except Exception as exc:
+            print(f"[INFO] AI Studio {imagen_model} unavailable on current key tier: {str(exc)[:90]}")
 
-            with Image.open(io.BytesIO(resp.content)) as im:
+    # Step 2B: Try Google AI Studio Gemini native multimodal image generation models
+    for gem_img_model in ("gemini-2.0-flash-preview-image-generation", "gemini-2.0-flash-exp-image-generation"):
+        try:
+            g_res = client.models.generate_content(
+                model=gem_img_model,
+                contents=f"Generate a photorealistic editorial news photo (16:9 horizontal, no text, no watermarks): {img_prompt}",
+                config=types.GenerateContentConfig(
+                    response_modalities=["TEXT", "IMAGE"],
+                    temperature=0.4,
+                ),
+            )
+            for cand_part in (g_res.candidates[0].content.parts if g_res and g_res.candidates else []):
+                inline = getattr(cand_part, "inline_data", None)
+                if inline and getattr(inline, "data", None) and len(inline.data) > 15000:
+                    with Image.open(io.BytesIO(inline.data)) as im:
+                        rgb = im.convert("RGB")
+                        buf = io.BytesIO()
+                        rgb.save(buf, format="JPEG", quality=93)
+                        print(f"[AI PHOTO] Generated via AI Studio {gem_img_model}!")
+                        return buf.getvalue()
+        except Exception as exc:
+            print(f"[INFO] AI Studio {gem_img_model} unavailable on current key tier: {str(exc)[:90]}")
 
-                if im.width < 500 or im.height < 350:
-                    continue
-
-                rgb = im.convert("RGB")
-
-                buf = io.BytesIO()
-
-                rgb.save(buf, format="JPEG", quality=92)
-
-                jpg_bytes = buf.getvalue()
-
-        except Exception:
-
-            continue
-
-
-
-        if verify_photo_clean_and_relevant(client, jpg_bytes, caption):
-
-            return jpg_bytes
-
-
+    # Step 2C: Guaranteed photorealistic Flux generation driven by the AI Studio prompt (with clean crop)
+    try:
+        seed = random.randint(1000, 999999)
+        flux_url = (
+            f"https://image.pollinations.ai/prompt/{quote_plus(img_prompt)}"
+            f"?width=1280&height=768&nologo=true&model=flux&seed={seed}"
+        )
+        f_resp = http_get(flux_url, timeout=30)
+        if f_resp and len(f_resp.content) > 15000:
+            with Image.open(io.BytesIO(f_resp.content)) as im:
+                if im.width >= 600 and im.height >= 400:
+                    # Crop bottom 48px to guarantee zero corner watermark
+                    clean_im = im.crop((0, 0, im.width, im.height - 48)).convert("RGB")
+                    buf = io.BytesIO()
+                    clean_im.save(buf, format="JPEG", quality=93)
+                    print(f"[AI PHOTO] Generated clean photorealistic image ({clean_im.width}x{clean_im.height})!")
+                    return buf.getvalue()
+    except Exception as exc:
+        print(f"[WARN] Flux AI photo generation fallback error: {exc}")
 
     return None
 
 
+def get_clean_photo_for_post(
+    client: genai.Client, candidate: dict[str, Any], caption: str, wiki_keywords: Any
+) -> bytes | None:
+    urls = list(candidate.get("photo_urls", []))
 
+    # Check og:image on the candidate URL and any external article links
+    check_links = [candidate.get("url", "")] + list(candidate.get("external_links", []))
+    for art_url in check_links[:3]:
+        if art_url and art_url.startswith("http") and "t.me/" not in art_url and "news.google.com" not in art_url and "lex.uz" not in art_url:
+            art_resp = http_get(art_url, timeout=12)
+            if art_resp:
+                soup = BeautifulSoup(art_resp.text, "html.parser")
+                og = soup.select_one("meta[property='og:image']")
+                if og and og.get("content") and og["content"].strip() not in urls:
+                    urls.append(og["content"].strip())
 
+    # 1. First try genuine source photos — strictly verified by PIL + Gemini Vision
+    for img_url in urls[:5]:
+        resp = http_get(img_url)
+        if not resp or len(resp.content) < 15000:
+            continue
+        try:
+            with Image.open(io.BytesIO(resp.content)) as im:
+                if im.width < 550 or im.height < 340:
+                    continue
+                rgb = im.convert("RGB")
+                buf = io.BytesIO()
+                rgb.save(buf, format="JPEG", quality=92)
+                jpg_bytes = buf.getvalue()
+        except Exception:
+            continue
+
+        if verify_photo_clean_and_relevant(client, jpg_bytes, caption):
+            print(f"[MEDIA] Verified clean source photo: {img_url[:70]}")
+            return jpg_bytes
+
+    # 2. If source has no photo or source photo was rejected (watermark/table/blurry), generate with AI!
+    print("[MEDIA] No clean source photo found; generating custom news photo via AI...")
+    ai_jpg = generate_ai_news_photo(client, caption, wiki_keywords)
+    if ai_jpg:
+        return ai_jpg
+
+    # 3. Last-resort fallback: Wikimedia Commons (strictly verified by Vision AI)
+    for img_url in search_wikimedia_fallback_photos(wiki_keywords)[:4]:
+        resp = http_get(img_url)
+        if not resp or len(resp.content) < 15000:
+            continue
+        try:
+            with Image.open(io.BytesIO(resp.content)) as im:
+                if im.width < 550 or im.height < 340:
+                    continue
+                rgb = im.convert("RGB")
+                buf = io.BytesIO()
+                rgb.save(buf, format="JPEG", quality=92)
+                jpg_bytes = buf.getvalue()
+        except Exception:
+            continue
+
+        if verify_photo_clean_and_relevant(client, jpg_bytes, caption):
+            return jpg_bytes
+
+    return None
 
 
 def extract_frame_from_video(video_url: str = "", video_bytes: bytes | None = None) -> bytes | None:
@@ -5293,20 +5326,12 @@ def main() -> int:
 
         res = None
         video_urls = cand.get("video_urls", [])
-        # Obtain verified photo if video is absent or as fallback frame
-        photo_bytes = None
-        if video_urls:
+        # Obtain strictly verified photo (or AI-generated photo if missing/rejected)
+        photo_bytes = get_clean_photo_for_post(
+            client, cand, caption, item.get("wikimedia_search_keywords", "")
+        )
+        if not photo_bytes and video_urls:
             photo_bytes = extract_frame_from_video(video_url=video_urls[0])
-        if not photo_bytes and cand.get("photo_urls"):
-            for p_url in cand["photo_urls"]:
-                p_resp = http_get(p_url)
-                if p_resp and len(p_resp.content) > 3000:
-                    photo_bytes = p_resp.content
-                    break
-        if not photo_bytes:
-            photo_bytes = get_clean_photo_for_post(
-                client, cand, caption, item.get("wikimedia_search_keywords", "")
-            )
 
         if not video_urls and not photo_bytes:
             print(f"[SKIP] Could not obtain media for {cand['url']}; blacklisting to prevent loop.")
