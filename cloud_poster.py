@@ -4708,7 +4708,7 @@ def _score_candidate_content_match(item: dict[str, Any], cand: dict[str, Any]) -
     """Compute lexical & numeric overlap score between drafted item and candidate text to prevent LLM index/URL shifts."""
     cand_raw = f"{cand.get('title', '')} {cand.get('text', '')} {cand.get('url', '')}"
     cand_lower = cand_raw.lower()
-    cand_latin = transliterate_cyrillic_to_qq_latin(cand_raw).lower()
+    cand_latin = transliterate_and_fix_outside_tags(cand_raw).lower()
 
     item_ru = f"{item.get('headline_ru', '')} {item.get('paragraph1_ru', '')} {item.get('paragraph2_ru', '')}".lower()
     item_cap = strip_post_footer(BeautifulSoup(item.get("caption_html", "") or "", "html.parser").get_text(" ", strip=True)).lower()
@@ -4733,7 +4733,7 @@ def _score_candidate_content_match(item: dict[str, Any], cand: dict[str, Any]) -
             score += 2.0
 
     # 3. Latin / English / Transliterated stem overlap
-    lat_source = f"{item_cap} {transliterate_cyrillic_to_qq_latin(item_ru).lower()} {item_kw}"
+    lat_source = f"{item_cap} {transliterate_and_fix_outside_tags(item_ru).lower()} {item_kw}"
     lat_words = re.findall(r"[a-záóúıǵń]{4,}", lat_source)
     lat_stems = {w[:5] for w in lat_words if w[:5] not in STOP_STEMS and w[:6] not in STOP_STEMS}
     for st in lat_stems:
