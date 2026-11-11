@@ -20,7 +20,7 @@ Every post MUST follow a clean, balanced narrative structure without artificial 
 
 {Paragraph 2: Context, background facts, significance, or past milestones. SPARINGLY and only when genuinely organic (consumer polls, lifestyle debate), a natural question may be included. For standard formal news, keep it purely informative and factual without forced questions.}
 
-👉 <a href="https://t.me/+ccz2kfdc8Fg1ZGYy">Qaraqalpaqsha jańalıqlar — aǵza bolıw</a>
+👉 <a href="https://t.me/qaraqalpaqshajanaliqlar">Qaraqalpaqsha jańalıqlar — aǵza bolıw</a>
 ```
 
 ### Strict Editorial Rules (No Exaggeration):
