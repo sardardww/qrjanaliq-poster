@@ -3554,7 +3554,7 @@ Every single post MUST be structured as a compelling multi-paragraph journalisti
 
 
 
-👉 <a href="https://t.me/+ccz2kfdc8Fg1ZGYy">Qaraqalpaqsha jańalıqlar — aǵza bolıw</a>
+👉 <a href="https://t.me/qaraqalpaqshajanaliqlar">Qaraqalpaqsha jańalıqlar — aǵza bolıw</a>
 
 
 
@@ -3572,7 +3572,7 @@ Every single post MUST be structured as a compelling multi-paragraph journalisti
 
 
 
-👉 <a href="https://t.me/+ccz2kfdc8Fg1ZGYy">Qaraqalpaqsha jańalıqlar — aǵza bolıw</a>
+👉 <a href="https://t.me/qaraqalpaqshajanaliqlar">Qaraqalpaqsha jańalıqlar — aǵza bolıw</a>
 
 
 
@@ -3608,7 +3608,7 @@ CRITICAL FORMATTING INSTRUCTIONS (MAINTAIN PROFESSIONAL BALANCE — DO NOT OVERD
 
 6. CLOSING FOOTER:
 
-👉 <a href="https://t.me/+ccz2kfdc8Fg1ZGYy">Qaraqalpaqsha jańalıqlar — aǵza bolıw</a>
+👉 <a href="https://t.me/qaraqalpaqshajanaliqlar">Qaraqalpaqsha jańalıqlar — aǵza bolıw</a>
 
 7. STRICT ZERO HALLUCINATION MANDATE (ABSOLUTE TRUTH & GROUNDING):
    - You must NEVER invent or hallucinate statements, quotes, official reactions ("представители ведомства сообщили", "dep málim etti basqarma wákilleri", "мутасаддилар билдирди"), reasons ("это стало возможным благодаря труду дехкан"), or background facts that DO NOT exist in the candidate's text!
@@ -3962,7 +3962,7 @@ INSTRUCTIONS FOR EACH ITEM:
 
    - PRESERVE the EXACT 2-paragraph narrative layout (\n\n between Headline, Paragraph 1, Paragraph 2, and Footer). NEVER collapse the paragraphs into a single text block!
 
-   - PRESERVE the closing link intact: 👉 <a href="https://t.me/+ccz2kfdc8Fg1ZGYy">Qaraqalpaqsha jańalıqlar — aǵza bolıw</a>
+   - PRESERVE the closing link intact: 👉 <a href="https://t.me/qaraqalpaqshajanaliqlar">Qaraqalpaqsha jańalıqlar — aǵza bolıw</a>
 
 
 
@@ -4260,7 +4260,7 @@ def transliterate_and_fix_outside_tags(html_text: str) -> str:
 
 
 
-STANDARD_FOOTER = '👉 <a href="https://t.me/+ccz2kfdc8Fg1ZGYy">Qaraqalpaqsha jańalıqlar — aǵza bolıw</a>'
+STANDARD_FOOTER = '👉 <a href="https://t.me/qaraqalpaqshajanaliqlar">Qaraqalpaqsha jańalıqlar — aǵza bolıw</a>'
 
 
 
