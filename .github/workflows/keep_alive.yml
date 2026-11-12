@@ -1,4 +1,4 @@
-name: "Render 24/7 Keep-Alive Pinger"
+name: "Render 24/7 Keep-Alive & Moderation Failover"
 
 on:
   schedule:
@@ -10,6 +10,75 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
-      - name: Ping Render Webhook & Health
+      - name: Ping Render Health & Process Pending Moderation Callbacks
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: |
-          curl -s -f --max-time 15 https://karakalpak-translator-api.onrender.com/health || true
+          python3 - << 'EOF'
+          import os, requests
+
+          tok = os.environ.get("TELEGRAM_BOT_TOKEN") or "9218407703:AAFSOcaVFSJafUL4liO-TS982y58ODYY2BA"
+          base = f"https://api.telegram.org/bot{tok}"
+
+          render_up = False
+          try:
+              r = requests.get("https://karakalpak-translator-api.onrender.com/health", timeout=10)
+              if r.status_code == 200:
+                  render_up = True
+                  print("Render /health is UP (200 OK)")
+          except Exception as e:
+              print("Render /health unreachable:", e)
+
+          wh = requests.get(f"{base}/getWebhookInfo", timeout=10).json().get("result", {})
+          pending = wh.get("pending_update_count", 0)
+          wh_url = wh.get("url", "")
+          print(f"Webhook url='{wh_url}', pending={pending}")
+
+          if render_up and not wh_url:
+              requests.post(f"{base}/setWebhook", json={
+                  "url": "https://karakalpak-translator-api.onrender.com/telegram-webhook",
+                  "allowed_updates": ["message", "channel_post", "callback_query"]
+              }, timeout=10)
+              print("Restored webhook to healthy Render endpoint.")
+          elif (not render_up and wh_url) or pending > 0:
+              if not render_up and wh_url:
+                  requests.post(f"{base}/deleteWebhook", json={"drop_pending_updates": False}, timeout=10)
+              r_upd = requests.post(f"{base}/getUpdates", json={"timeout": 2}, timeout=10).json()
+              last_uid = None
+              for u in r_upd.get("result", []):
+                  last_uid = u["update_id"]
+                  cb = u.get("callback_query")
+                  if not cb:
+                      continue
+                  cb_id = cb.get("id")
+                  cb_data = cb.get("data", "")
+                  msg = cb.get("message", {})
+                  chat_id = msg.get("chat", {}).get("id")
+                  message_id = msg.get("message_id")
+                  if cb_data.startswith("pub"):
+                      requests.post(f"{base}/answerCallbackQuery", json={"callback_query_id": cb_id, "text": "🚀 Post kanalǵa shıǵarılmaqta..."}, timeout=8)
+                      r1 = requests.post(f"{base}/copyMessage", json={"chat_id": "-1003987848482", "from_chat_id": chat_id, "message_id": message_id}, timeout=10).json()
+                      r2 = requests.post(f"{base}/copyMessage", json={"chat_id": "-1003739589000", "from_chat_id": chat_id, "message_id": message_id}, timeout=10).json()
+                      pub_id = r1.get("result", {}).get("message_id") if r1.get("ok") else 0
+                      sec_id = r2.get("result", {}).get("message_id") if r2.get("ok") else 0
+                      pub_url = f"https://t.me/qaraqalpaqshajanaliqlar/{pub_id}" if pub_id else f"https://t.me/janaliqjanaliq/{sec_id}"
+                      requests.post(f"{base}/editMessageReplyMarkup", json={
+                          "chat_id": chat_id,
+                          "message_id": message_id,
+                          "reply_markup": {"inline_keyboard": [[{"text": f"✅ Kanalǵa shıǵarıldı (@qaraqalpaqshajanaliqlar #{pub_id or sec_id})", "url": pub_url}]]}
+                      }, timeout=10)
+                  elif cb_data.startswith("del"):
+                      requests.post(f"{base}/answerCallbackQuery", json={"callback_query_id": cb_id, "text": "❌ Post biykar etildi."}, timeout=8)
+                      requests.post(f"{base}/editMessageReplyMarkup", json={
+                          "chat_id": chat_id,
+                          "message_id": message_id,
+                          "reply_markup": {"inline_keyboard": [[{"text": "❌ Biykar etildi", "callback_data": "none"}]]}
+                      }, timeout=10)
+              if last_uid is not None:
+                  requests.post(f"{base}/getUpdates", json={"offset": last_uid + 1, "timeout": 1}, timeout=10)
+              if render_up:
+                  requests.post(f"{base}/setWebhook", json={
+                      "url": "https://karakalpak-translator-api.onrender.com/telegram-webhook",
+                      "allowed_updates": ["message", "channel_post", "callback_query"]
+                  }, timeout=10)
+          EOF

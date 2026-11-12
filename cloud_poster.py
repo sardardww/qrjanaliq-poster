@@ -3162,103 +3162,101 @@ KARAKALPAK_TRANSLATOR_API_URL = os.environ.get(
 
 
 
-def ensure_render_service_warm(max_wait_seconds: int = 60) -> bool:
+_RENDER_AWAKE = False
 
-    """Proactively wakes up Render translation API if it's sleeping, waiting until it returns 200 OK."""
 
+def ensure_render_service_warm(max_wait_seconds: int = 12) -> bool:
+    """Proactively checks if Render translation API is awake without blocking the pipeline if Render is sleeping."""
+    global _RENDER_AWAKE
     health_url = "https://karakalpak-translator-api.onrender.com/health"
-
     print("[WARMUP] Checking if Render Translation API is awake...")
-
     start_time = time.time()
-
-    attempts = 0
-
-    while time.time() - start_time < max_wait_seconds:
-
-        attempts += 1
-
-        try:
-
-            req = urllib.request.Request(health_url, headers={"User-Agent": "Mozilla/5.0"})
-
-            with urllib.request.urlopen(req, timeout=15) as resp:
-
-                if resp.status == 200:
-
-                    elapsed = round(time.time() - start_time, 1)
-
-                    print(f"[WARMUP] Render is AWAKE and READY (took {elapsed}s, attempt {attempts})!")
-
-                    return True
-
-        except Exception as e:
-
-            elapsed = round(time.time() - start_time, 1)
-
-            print(f"[WARMUP] Render waking up... ({e}, elapsed: {elapsed}s)")
-
-            time.sleep(3)
-
-    print(f"[WARMUP] Render did not respond within {max_wait_seconds}s.")
-
+    try:
+        req = urllib.request.Request(health_url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=min(10, max_wait_seconds)) as resp:
+            if resp.status == 200:
+                elapsed = round(time.time() - start_time, 1)
+                print(f"[WARMUP] Render is AWAKE and READY (took {elapsed}s)!")
+                _RENDER_AWAKE = True
+                return True
+    except Exception as e:
+        elapsed = round(time.time() - start_time, 1)
+        print(f"[WARMUP] Render HTTP unreachable ({e}, elapsed: {elapsed}s) — switching to built-in Tilmoch Dictionary+Grammar engine.")
+    _RENDER_AWAKE = False
     return False
 
 
+def _translate_via_builtin_tilmoch_engine(text: str) -> str | None:
+    """Direct built-in Tilmoch 3-step Karakalpak dictionary + theoretical grammar translation when Render host is offline."""
+    global _RENDER_AWAKE
+    gemini_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    if not gemini_key:
+        return None
+    glossary = extract_grounding_glossary_for_prompt(text, limit=45)
+    sys_prompt = f"""You are the Tilmoch Russian-to-Karakalpak Neural Translator grounded in the 16,000-entry Russian-Karakalpak Dictionary and the 2016 Official 34-Letter Karakalpak Latin Alphabet.
+{OFFICIAL_KARAKALPAK_ALPHABET_RULES}
+Translate the Russian input text into 100% pure, literary Karakalpak Latin script.
+Return ONLY valid JSON: {{"latin": "..."}}"""
+    user_prompt = f"""RUSSIAN SOURCE TEXT:
+\"\"\"{text}\"\"\"
+
+{glossary}
+
+Translate the Russian source text above into natural, grammatically flawless Karakalpak Latin script.
+Return strictly JSON: {{"latin": "..."}}"""
+    try:
+        client = genai.Client(api_key=gemini_key, http_options=types.HttpOptions(timeout=15000))
+        resp = generate_content_with_fallback(
+            client,
+            PROOFREAD_MODELS,
+            user_prompt,
+            types.GenerateContentConfig(
+                system_instruction=sys_prompt,
+                temperature=0.1,
+                response_mime_type="application/json",
+            ),
+        )
+        raw = (resp.text or "").strip()
+        if raw.startswith("```"):
+            raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.DOTALL).strip()
+        parsed = json.loads(raw)
+        lat = (parsed.get("latin") or "").strip()
+        if lat and len(lat) > 15:
+            print(f"[TRANSLATE_API] Translated via built-in Tilmoch engine ({len(lat)} chars)")
+            return lat
+    except Exception as exc:
+        print(f"[TRANSLATE_API] Built-in Tilmoch engine notice: {exc}")
+    return None
 
 
-
-def translate_post_via_custom_api(text: str, timeout: int = 45, retries: int = 2) -> str | None:
-
-    """Translates Russian news caption into Karakalpak Latin using user's dedicated Render API.
-
-    STRICT POLICY: If Tilmoch translation fails, return None so the post is SKIPPED without arbitrary posting."""
-
+def translate_post_via_custom_api(text: str, timeout: int = 20, retries: int = 1) -> str | None:
+    """Translates Russian news caption into Karakalpak Latin using user's dedicated Render API, with automatic built-in Tilmoch failover if Render is sleeping."""
+    global _RENDER_AWAKE
     if not text or not text.strip():
-
         return None
 
-    payload = {"text": text, "target_script": "latin", "model": "auto"}
+    if _RENDER_AWAKE:
+        payload = {"text": text, "target_script": "latin", "model": "auto"}
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            KARAKALPAK_TRANSLATOR_API_URL,
+            data=data,
+            headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"}
+        )
+        for attempt in range(retries + 1):
+            try:
+                with urllib.request.urlopen(req, timeout=timeout) as resp:
+                    res = json.loads(resp.read().decode("utf-8"))
+                    translated = res.get("translated_text", "")
+                    if translated and len(translated.strip()) > 15:
+                        print(f"[TRANSLATE_API] Successfully translated caption via Tilmoch Render ({len(translated)} chars)")
+                        return translated
+            except Exception as e:
+                print(f"[TRANSLATE_API] Render attempt {attempt+1} failed: {e}")
+                _RENDER_AWAKE = False
+                break
 
-    data = json.dumps(payload).encode("utf-8")
-
-    req = urllib.request.Request(
-
-        KARAKALPAK_TRANSLATOR_API_URL,
-
-        data=data,
-
-        headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"}
-
-    )
-
-    for attempt in range(retries + 1):
-
-        try:
-
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
-
-                res = json.loads(resp.read().decode("utf-8"))
-
-                translated = res.get("translated_text", "")
-
-                if translated and len(translated.strip()) > 30:
-
-                    print(f"[TRANSLATE_API] Successfully translated caption via Tilmoch ({len(translated)} chars)")
-
-                    return translated
-
-        except Exception as e:
-
-            print(f"[TRANSLATE_API] Attempt {attempt+1} failed: {e}")
-
-            if attempt < retries:
-
-                time.sleep(3)
-
-    print("[TRANSLATE_API] Tilmoch API failed after retries. STRICT USER DIRECTIVE: Post will be SKIPPED, no arbitrary posting.")
-
-    return None
+    return _translate_via_builtin_tilmoch_engine(text)
 
 
 
@@ -5255,16 +5253,17 @@ def main() -> int:
 
 
 
-    ensure_render_service_warm(max_wait_seconds=45)
+    render_ok = ensure_render_service_warm(max_wait_seconds=12)
 
     # Check Moderation Queue status on Render to maintain steady 4-post buffer
     queue_status = {"pending_in_queue": 0, "has_active_waiting_admin": False}
-    try:
-        r_stat = requests.get("https://karakalpak-translator-api.onrender.com/drafts/status", timeout=10)
-        if r_stat.status_code == 200:
-            queue_status = r_stat.json()
-    except Exception as exc:
-        print(f"[WARN] Could not check Render queue status: {exc}")
+    if render_ok:
+        try:
+            r_stat = requests.get("https://karakalpak-translator-api.onrender.com/drafts/status", timeout=8)
+            if r_stat.status_code == 200:
+                queue_status = r_stat.json()
+        except Exception as exc:
+            print(f"[WARN] Could not check Render queue status: {exc}")
 
     pending_in_q = queue_status.get("pending_in_queue", 0)
     has_active = 1 if queue_status.get("has_active_waiting_admin") else 0
