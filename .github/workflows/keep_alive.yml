@@ -58,14 +58,12 @@ jobs:
                   if cb_data.startswith("pub"):
                       requests.post(f"{base}/answerCallbackQuery", json={"callback_query_id": cb_id, "text": "🚀 Post kanalǵa shıǵarılmaqta..."}, timeout=8)
                       r1 = requests.post(f"{base}/copyMessage", json={"chat_id": "-1003987848482", "from_chat_id": chat_id, "message_id": message_id}, timeout=10).json()
-                      r2 = requests.post(f"{base}/copyMessage", json={"chat_id": "-1003739589000", "from_chat_id": chat_id, "message_id": message_id}, timeout=10).json()
                       pub_id = r1.get("result", {}).get("message_id") if r1.get("ok") else 0
-                      sec_id = r2.get("result", {}).get("message_id") if r2.get("ok") else 0
-                      pub_url = f"https://t.me/qaraqalpaqshajanaliqlar/{pub_id}" if pub_id else f"https://t.me/janaliqjanaliq/{sec_id}"
+                      pub_url = f"https://t.me/qaraqalpaqshajanaliqlar/{pub_id}"
                       requests.post(f"{base}/editMessageReplyMarkup", json={
                           "chat_id": chat_id,
                           "message_id": message_id,
-                          "reply_markup": {"inline_keyboard": [[{"text": f"✅ Kanalǵa shıǵarıldı (@qaraqalpaqshajanaliqlar #{pub_id or sec_id})", "url": pub_url}]]}
+                          "reply_markup": {"inline_keyboard": [[{"text": f"✅ Kanalǵa shıǵarıldı (@qaraqalpaqshajanaliqlar #{pub_id})", "url": pub_url}]]}
                       }, timeout=10)
                   elif cb_data.startswith("del"):
                       requests.post(f"{base}/answerCallbackQuery", json={"callback_query_id": cb_id, "text": "❌ Post biykar etildi."}, timeout=8)

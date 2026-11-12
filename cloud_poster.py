@@ -1711,7 +1711,7 @@ def fetch_existing_channel_posts() -> tuple[list[str], set[str]]:
 
                     href = a_tag.get("href", "").strip()
 
-                    if href and "t.me/janaliqjanaliq" not in href and "t.me/qaraqalpaqshajanaliqlar" not in href:
+                    if href and "t.me/qaraqalpaqshajanaliqlar" not in href:
 
                         seen_urls.add(normalize_url(href))
 
@@ -1719,18 +1719,17 @@ def fetch_existing_channel_posts() -> tuple[list[str], set[str]]:
 
 
 
-    # Scrape public channel @janaliqjanaliq for real-time live posts and URLs
-    for ch_name in ["janaliqjanaliq", "qaraqalpaqshajanaliqlar"]:
-        resp = http_get(f"https://t.me/s/{ch_name}")
-        if resp:
-            soup1 = BeautifulSoup(resp.text, "html.parser")
-            page1_summaries, oldest = _extract_from_soup(soup1)
-            if oldest and oldest > 1:
-                prev_resp = http_get(f"https://t.me/s/{ch_name}?before={oldest}")
-                if prev_resp:
-                    prev_summaries, _ = _extract_from_soup(BeautifulSoup(prev_resp.text, "html.parser"))
-                    recent_summaries.extend(prev_summaries)
-            recent_summaries.extend(page1_summaries)
+    # Scrape public channel @qaraqalpaqshajanaliqlar for real-time live posts and URLs
+    resp = http_get("https://t.me/s/qaraqalpaqshajanaliqlar")
+    if resp:
+        soup1 = BeautifulSoup(resp.text, "html.parser")
+        page1_summaries, oldest = _extract_from_soup(soup1)
+        if oldest and oldest > 1:
+            prev_resp = http_get(f"https://t.me/s/qaraqalpaqshajanaliqlar?before={oldest}")
+            if prev_resp:
+                prev_summaries, _ = _extract_from_soup(BeautifulSoup(prev_resp.text, "html.parser"))
+                recent_summaries.extend(prev_summaries)
+        recent_summaries.extend(page1_summaries)
 
 
 
@@ -4531,7 +4530,7 @@ def format_caption_with_direct_source_link(caption: str, exact_url: str, source_
     has_external_link = False
     for a in soup_body.find_all("a"):
         href = a.get("href", "")
-        if "qaraqalpaqshajanaliqlar" not in href and "+ccz2kfdc8Fg1ZGYy" not in href and "janaliqjanaliq" not in href:
+        if "qaraqalpaqshajanaliqlar" not in href and "+ccz2kfdc8Fg1ZGYy" not in href:
             if not a.get_text().strip():
                 a.unwrap()
                 continue
@@ -4764,7 +4763,7 @@ def resolve_candidate_for_item(item: dict[str, Any], candidates: list[dict[str, 
         cap = item.get("caption_html") or ""
         for m in re.findall(r'href="([^"]+)"', cap):
             nm = normalize_url(m)
-            if "t.me/qaraqalpaqshajanaliqlar" in nm or "+ccz2kfdc8Fg1ZGYy" in m or "janaliqjanaliq" in nm:
+            if "t.me/qaraqalpaqshajanaliqlar" in nm or "+ccz2kfdc8Fg1ZGYy" in m:
                 continue
             for c in candidates:
                 if normalize_url(c["url"]) == nm or normalize_url(c.get("fallback_post_url", "")) == nm:
