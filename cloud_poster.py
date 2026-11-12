@@ -3192,7 +3192,7 @@ def _translate_via_builtin_tilmoch_engine(text: str) -> str | None:
     gemini_key = os.environ.get("GEMINI_API_KEY", "").strip()
     if not gemini_key:
         return None
-    glossary = extract_grounding_glossary_for_prompt(text, limit=45)
+    glossary = extract_dictionary_glossary_for_text(text, limit=45)
     sys_prompt = f"""You are the Tilmoch Russian-to-Karakalpak Neural Translator grounded in the 16,000-entry Russian-Karakalpak Dictionary and the 2016 Official 34-Letter Karakalpak Latin Alphabet.
 {OFFICIAL_KARAKALPAK_ALPHABET_RULES}
 Translate the Russian input text into 100% pure, literary Karakalpak Latin script.
