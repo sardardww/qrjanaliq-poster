@@ -696,6 +696,22 @@ AUTO_WORD_FIXES = [
 
     (r"\bsoʻm\b", "sum"),
 
+    (r"\bretinde\b", "sıpatında"),
+
+    (r"\bRetinde\b", "Sıpatında"),
+
+    (r"\bjariyladı\b", "járiyaladı"),
+
+    (r"\bjariyladi\b", "járiyaladı"),
+
+    (r"\bjariyla([a-zıóúáǵń]*)\b", r"járiyala\1"),
+
+    (r"\bqorshap turǵan orta\b", "qorshaǵan ortalıq"),
+
+    (r"\bqorshaǵan orta\b", "qorshaǵan ortalıq"),
+
+    (r"\btájiriybelik tárepten sheksiz\b", "deyerli tawsılmaytuǵın"),
+
     # Additional critical slips & anti-Uzbekisms audited from posts 97-139
 
     (r"\bprezidendi\b", "prezidenti"),
