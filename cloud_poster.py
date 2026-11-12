@@ -4443,6 +4443,13 @@ FORBIDDEN_ROOTS_CHECK = [
     (r"\bjarahat(lan|qa|tıń|tı|ta|lar)?\b", r"jaraqat\1"),
 
     (r"\bJarahat(lan|qa|tıń|tı|ta|lar)?\b", r"Jaraqat\1"),
+    (r"\bqorshap turǵan ortaǵa\b", "qorshaǵan ortalıqqa"),
+    (r"\bqorshap turǵan ortanıń\b", "qorshaǵan ortalıqtıń"),
+    (r"\bqorshap turǵan ortanı\b", "qorshaǵan ortalıqtı"),
+    (r"\bqorshap turǵan orta\b", "qorshaǵan ortalıq"),
+    (r"\bqorshaǵan ortaǵa\b", "qorshaǵan ortalıqqa"),
+    (r"\bdúnyge\b", "dúnyaǵa"),
+    (r"\bShvedtiń\b", "Shveciyanıń"),
 
 ]
 
